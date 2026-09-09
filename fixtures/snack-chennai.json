@@ -1,0 +1,15 @@
+{
+  "id": "snack-chennai",
+  "label": "₹3,000 student snack · Chennai",
+  "notes": "Tiny local snack budget. Expect Reels + WhatsApp + ShareChat. LinkedIn must score 0. No channel above 50% because budget is not < 3000. All metrics ESTIMATE.",
+  "input": {
+    "domain": "example-snack.local",
+    "product_name": "Campus Crunch masala peanuts",
+    "budget": 3000,
+    "city": "Chennai",
+    "audience_age": "18-24",
+    "audience_notes": "College students in Anna Nagar / Velachery hostels and PGs. Impulse snack, Tamil + English, price sensitive.",
+    "goal": "sales",
+    "language": "Tamil"
+  }
+}

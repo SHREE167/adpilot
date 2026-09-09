@@ -1,0 +1,423 @@
+{
+  "id": "ap_5ecca0b1-e6ce-49bb-99f2-fee691673a54",
+  "createdAt": "2026-09-09T15:51:36.982Z",
+  "input": {
+    "domain": "example-saas.local",
+    "product_name": "Pipeboard inbound-to-demo CRM for Indian B2B teams",
+    "budget": 40000,
+    "city": "Bengaluru",
+    "audience_age": "25-45",
+    "audience_notes": "Professional buyers: founders, sales heads, RevOps at 10–200 person SaaS/IT services firms. Decision makers, English.",
+    "goal": "b2b",
+    "language": "English"
+  },
+  "site": {
+    "domain": "example-saas.local",
+    "url": "https://example-saas.local",
+    "title": "Pipeboard inbound-to-demo CRM for Indian B2B teams",
+    "description": null,
+    "h1": null,
+    "scraped": false,
+    "scrapeError": "Non-public domain skipped; continuing with product_name"
+  },
+  "category": "saas",
+  "priceTier": "high",
+  "scores": [
+    {
+      "channelId": "google_search",
+      "name": "Google Search",
+      "score": 72,
+      "reasons": [
+        "+14 B2B / SaaS search demand",
+        "+8 higher ticket supports CPC"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "google_display",
+      "name": "Google Display",
+      "score": 40,
+      "reasons": [
+        "-10 display is leaky for B2B"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "youtube",
+      "name": "YouTube",
+      "score": 52,
+      "reasons": [
+        "+2 explainer / thought-leadership possible"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "instagram_reels",
+      "name": "Instagram Reels",
+      "score": 40,
+      "reasons": [
+        "-16 weak for professional buyers",
+        "+6 metro creative culture"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "instagram_feed",
+      "name": "Instagram Feed",
+      "score": 48,
+      "reasons": [
+        "+10 Feed still works 20–36",
+        "-12 not where B2B buyers evaluate"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "facebook",
+      "name": "Facebook",
+      "score": 56,
+      "reasons": [
+        "+14 older relative audience",
+        "-8 noisy for B2B"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "whatsapp",
+      "name": "WhatsApp",
+      "score": 34,
+      "reasons": [
+        "-16 not a SaaS evaluation surface"
+      ],
+      "rejected": true,
+      "rejectReason": "Score 34 is below the 40 cutoff"
+    },
+    {
+      "channelId": "sharechat",
+      "name": "ShareChat",
+      "score": 24,
+      "reasons": [
+        "+2 metro still works",
+        "-28 poor for English B2B"
+      ],
+      "rejected": true,
+      "rejectReason": "Score 24 is below the 40 cutoff"
+    },
+    {
+      "channelId": "linkedin",
+      "name": "LinkedIn",
+      "score": 100,
+      "reasons": [
+        "+28 native B2B graph",
+        "+16 professional audience",
+        "+10 pipeline / demo goal"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "telegram",
+      "name": "Telegram",
+      "score": 60,
+      "reasons": [
+        "+10 community / niche channels"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "reddit",
+      "name": "Reddit",
+      "score": 80,
+      "reasons": [
+        "+14 niche / tech threads",
+        "+8 English audience",
+        "+8 product is discussed on Reddit"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "x",
+      "name": "X",
+      "score": 76,
+      "reasons": [
+        "+12 tech / founder discourse",
+        "+6 English-first",
+        "+8 founder-led"
+      ],
+      "rejected": false
+    }
+  ],
+  "mix": [
+    {
+      "channelId": "linkedin",
+      "name": "LinkedIn",
+      "score": 100,
+      "budget": 10810,
+      "percent": 27.025,
+      "forecast": {
+        "impressions": 43240,
+        "clicks": 259,
+        "ctr": 0.006,
+        "cpm": 250,
+        "cpc": 40,
+        "reach": 13513,
+        "conversions": 4.9,
+        "cpa": 2228,
+        "note": "ESTIMATE from rate card math (impressions = spend/CPM*1000, clicks = impressions*CTR)"
+      },
+      "explanation": "Sponsored content and InMail to job titles that buy Pipeboard inbound-to-demo CRM for Indian B2B teams. Tight audience, high CPC, so we only use it when the ticket supports it."
+    },
+    {
+      "channelId": "reddit",
+      "name": "Reddit",
+      "score": 80,
+      "budget": 8270,
+      "percent": 20.674999999999997,
+      "forecast": {
+        "impressions": 103375,
+        "clicks": 827,
+        "ctr": 0.008,
+        "cpm": 80,
+        "cpc": 15,
+        "reach": 32305,
+        "conversions": 7.3,
+        "cpa": 1136,
+        "note": "ESTIMATE from rate card math (impressions = spend/CPM*1000, clicks = impressions*CTR)"
+      },
+      "explanation": "Promote in subs where people already argue about tools like Pipeboard inbound-to-demo CRM for Indian B2B teams. Native tone; no banner-speak."
+    },
+    {
+      "channelId": "x",
+      "name": "X",
+      "score": 76,
+      "budget": 7776,
+      "percent": 19.439999999999998,
+      "forecast": {
+        "impressions": 111086,
+        "clicks": 778,
+        "ctr": 0.007,
+        "cpm": 70,
+        "cpc": 10,
+        "reach": 34714,
+        "conversions": 5.1,
+        "cpa": 1515,
+        "note": "ESTIMATE from rate card math (impressions = spend/CPM*1000, clicks = impressions*CTR)"
+      },
+      "explanation": "Founder-led posts and a light promote around launch hours. Good for tech chatter, weak for local impulse."
+    },
+    {
+      "channelId": "google_search",
+      "name": "Google Search",
+      "score": 72,
+      "budget": 7288,
+      "percent": 18.22,
+      "forecast": {
+        "impressions": 40489,
+        "clicks": 1620,
+        "ctr": 0.04,
+        "cpm": 180,
+        "cpc": 12,
+        "reach": 12653,
+        "conversions": 35.6,
+        "cpa": 205,
+        "note": "ESTIMATE from rate card math (impressions = spend/CPM*1000, clicks = impressions*CTR)"
+      },
+      "explanation": "Capture people in Bengaluru already looking for Pipeboard inbound-to-demo CRM for Indian B2B teams or a close substitute. Search is the high-intent slice of a saas plan."
+    },
+    {
+      "channelId": "telegram",
+      "name": "Telegram",
+      "score": 60,
+      "budget": 5856,
+      "percent": 14.64,
+      "forecast": {
+        "impressions": 234240,
+        "clicks": 4685,
+        "ctr": 0.02,
+        "cpm": 25,
+        "cpc": 3,
+        "reach": 73200,
+        "conversions": 10.3,
+        "cpa": 568,
+        "note": "ESTIMATE from rate card math (impressions = spend/CPM*1000, clicks = impressions*CTR)"
+      },
+      "explanation": "Pin a launch note in relevant Bengaluru / industry groups. Treat Telegram as community, not a performance buy."
+    }
+  ],
+  "rejected": [
+    {
+      "channelId": "facebook",
+      "name": "Facebook",
+      "score": 56,
+      "reasons": [
+        "+14 older relative audience",
+        "-8 noisy for B2B"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "youtube",
+      "name": "YouTube",
+      "score": 52,
+      "reasons": [
+        "+2 explainer / thought-leadership possible"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "instagram_feed",
+      "name": "Instagram Feed",
+      "score": 48,
+      "reasons": [
+        "+10 Feed still works 20–36",
+        "-12 not where B2B buyers evaluate"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "google_display",
+      "name": "Google Display",
+      "score": 40,
+      "reasons": [
+        "-10 display is leaky for B2B"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "instagram_reels",
+      "name": "Instagram Reels",
+      "score": 40,
+      "reasons": [
+        "-16 weak for professional buyers",
+        "+6 metro creative culture"
+      ],
+      "rejected": false
+    },
+    {
+      "channelId": "whatsapp",
+      "name": "WhatsApp",
+      "score": 34,
+      "reasons": [
+        "-16 not a SaaS evaluation surface"
+      ],
+      "rejected": true,
+      "rejectReason": "Score 34 is below the 40 cutoff"
+    },
+    {
+      "channelId": "sharechat",
+      "name": "ShareChat",
+      "score": 24,
+      "reasons": [
+        "+2 metro still works",
+        "-28 poor for English B2B"
+      ],
+      "rejected": true,
+      "rejectReason": "Score 24 is below the 40 cutoff"
+    }
+  ],
+  "totals": {
+    "budget": 40000,
+    "impressions": 532430,
+    "clicks": 8169,
+    "reach": 166385,
+    "conversions": 63.2,
+    "estimatedCpa": 633,
+    "estimatedRoas": 2.28,
+    "estimatedAov": 18000
+  },
+  "weeklyForecast": [
+    {
+      "week": 1,
+      "label": "Week 1",
+      "impressions": 95837,
+      "clicks": 1470,
+      "spend": 7200
+    },
+    {
+      "week": 2,
+      "label": "Week 2",
+      "impressions": 138432,
+      "clicks": 2124,
+      "spend": 10400
+    },
+    {
+      "week": 3,
+      "label": "Week 3",
+      "impressions": 159729,
+      "clicks": 2451,
+      "spend": 12000
+    },
+    {
+      "week": 4,
+      "label": "Week 4",
+      "impressions": 138432,
+      "clicks": 2124,
+      "spend": 10400
+    }
+  ],
+  "adAngles": [
+    {
+      "headline": "Pipeboard inbound-to-demo CRM for Indian B2B teams pays for itself in one sprint",
+      "primaryText": "Teams in Bengaluru still stitch this together with sheets and Slack. Pipeboard inbound-to-demo CRM for Indian B2B teams gives you one workflow, one owner, one weekly number.",
+      "cta": "Book a 20-min demo",
+      "channelHint": "LinkedIn, Google Search"
+    },
+    {
+      "headline": "Stop losing the same lead twice",
+      "primaryText": "If your CRM is a graveyard, Pipeboard inbound-to-demo CRM for Indian B2B teams is the follow-up system your AEs will actually use.",
+      "cta": "See a live pipeline",
+      "channelHint": "LinkedIn, Reddit"
+    },
+    {
+      "headline": "Built for Indian B2B reality",
+      "primaryText": "GST, WhatsApp threads, multi-GSTIN chaos. Pipeboard inbound-to-demo CRM for Indian B2B teams was not designed in a Palo Alto vacuum.",
+      "cta": "Start a trial",
+      "channelHint": "Google Search, X"
+    }
+  ],
+  "outreach": [
+    {
+      "channel": "WhatsApp",
+      "title": "Warm lead, 2 hours after demo form",
+      "body": "Hi {{firstName}}, this is {{sender}} from Pipeboard inbound-to-demo CRM for Indian B2B teams. Got your note from the Bengaluru landing page. Can I send a 4-min loom of the exact workflow you mentioned, or would a 20-min slot tomorrow be easier?"
+    },
+    {
+      "channel": "LinkedIn DM",
+      "title": "Connection note",
+      "body": "Hi {{firstName}} — I work on Pipeboard inbound-to-demo CRM for Indian B2B teams. Not selling in this note. We help Bengaluru teams replace sheet-and-Slack ops. If ops pain is real this quarter, happy to share a teardown of a lookalike account."
+    },
+    {
+      "channel": "Email",
+      "title": "Cold email 1",
+      "body": "Subject: Bengaluru team still doing {{pain}} by hand?\n\n{{firstName}},\nMost {{title}}s we talk to have the same leak: leads come in, nobody owns the next step.\nPipeboard inbound-to-demo CRM for Indian B2B teams makes that owner obvious.\nWorth a 20-min teardown of your current stack?\n– {{sender}}"
+    },
+    {
+      "channel": "LinkedIn InMail",
+      "title": "Sponsored InMail",
+      "body": "{{firstName}}, skipping the generic SaaS pitch. Pipeboard inbound-to-demo CRM for Indian B2B teams is for Indian B2B teams that live in WhatsApp + GSTIN reality. If you own pipeline quality in Bengaluru, I will show one account that cut follow-up delay by half. Yes / No is a fine reply."
+    },
+    {
+      "channel": "Founder-to-founder",
+      "title": "Short email / X DM",
+      "body": "Building Pipeboard inbound-to-demo CRM for Indian B2B teams. We are not another US clone. If you are hiring SDRs in Bengaluru this half, I will show the playbook we use internally — no deck theatre."
+    },
+    {
+      "channel": "Cold call",
+      "title": "Gatekeeper + 25s pitch",
+      "body": "Hi, I am {{sender}} from Pipeboard inbound-to-demo CRM for Indian B2B teams. I am not asking for a meeting with everyone — only whoever owns inbound-to-demo in Bengaluru. I can send a 3-slide note first. Who should I mail?"
+    },
+    {
+      "channel": "Telegram / Slack community",
+      "title": "Helpful post, not spam",
+      "body": "We open-sourced the scoring sheet we use inside Pipeboard inbound-to-demo CRM for Indian B2B teams (how we rank channels before spending). If useful, grab it here. Happy to walk a Bengaluru founder through it on Friday office hours."
+    },
+    {
+      "channel": "Webinar invite",
+      "title": "Calendar + LinkedIn",
+      "body": "30 min, Thursday 4pm IST: “Pipeline without a 6-lakh agency retainer”. Live walkthrough of Pipeboard inbound-to-demo CRM for Indian B2B teams. Seats capped at 40 so we can actually answer Bengaluru / India-stack questions."
+    }
+  ],
+  "llmUsed": false,
+  "llmProvider": null,
+  "disclaimer": "All metrics are ESTIMATE values from a local India 2026 rate card. AdPilot does not buy ads, does not connect to Meta or Google, and does not report live delivery.",
+  "estimateLabel": "ESTIMATE",
+  "agentMs": 2
+}

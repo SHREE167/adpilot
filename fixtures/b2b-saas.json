@@ -1,0 +1,15 @@
+{
+  "id": "b2b-saas",
+  "label": "₹40,000 B2B SaaS · Bengaluru",
+  "notes": "Professional pipeline. LinkedIn is allowed (budget ≥ ₹15,000 and goal is B2B with a professional audience). Search / Reddit / X should appear. ShareChat should be rejected. All metrics ESTIMATE.",
+  "input": {
+    "domain": "example-saas.local",
+    "product_name": "Pipeboard inbound-to-demo CRM for Indian B2B teams",
+    "budget": 40000,
+    "city": "Bengaluru",
+    "audience_age": "25-45",
+    "audience_notes": "Professional buyers: founders, sales heads, RevOps at 10–200 person SaaS/IT services firms. Decision makers, English.",
+    "goal": "b2b",
+    "language": "English"
+  }
+}
