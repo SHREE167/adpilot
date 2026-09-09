@@ -17,8 +17,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Live
 
+- App: https://adpilot-olive-nine.vercel.app
 - GitHub: https://github.com/SHREE167/adpilot
-- Vercel: set after first deploy (Hobby timeout is 10s; scrape is capped at 4s so a plan still returns).
+
+Hobby functions time out at ~10s. Scrape is capped at 4s so a plan still returns. Add `GROQ_API_KEY` (or OpenAI/Gemini) and `POSTGRES_URL` in the Vercel project env if you want LLM copy and durable saves.
 
 Load a sample from the form:
 
