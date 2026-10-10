@@ -46,6 +46,32 @@ No API key is required. Channel mix comes from a trained **XGBoost** model. With
 - Hosting a second server (Next.js is the whole app).
 - Live Meta/Google buying or OAuth.
 
+## v2 roadmap (branch `v2`)
+
+Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planner for India's smallest businesses, grounded in live local data, explainable, self-critiquing, and willing to say when not to spend.
+
+| # | Scope | Status |
+| --- | --- | --- |
+| M1 | Enrichment framework (Signal, timeouts, cache, mock mode), agent trace, LIVE/ESTIMATE badges, site readiness (tracking + funnel), festival calendar | done |
+| M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | next |
+| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | |
+| M4 | Meta reach, YouTube creators, launch kit + grounding guard | |
+| M5 | Budget slider, forecast ranges | |
+| M6 | Critic, actuals loop, calibrated intervals, explore slice | |
+| M7 | Ad previews, share/print, trace page | |
+| M8 | Eval v2 vs v1 report, demo script | |
+
+What M1 adds to every plan:
+
+- **Step 3 enrich** runs every data source in parallel (`Promise.allSettled`). Each source has a hard timeout and is optional; a failed source is recorded, never an error page.
+- **Ready to spend?**: Meta Pixel / GA4 / GTM, HTTPS, viewport, WhatsApp click-to-chat, tap-to-call, CTA and og:image checks, read from the page we already fetch. If GTM is present we say "a pixel may be inside it", never "no pixel".
+- **Timing**: `data/festivals-in.json` (2026–2027, dates `verified: false` until checked) and `data/city-state.json`. Festival weeks raise the CPM (ESTIMATE), so the weekly forecast and totals buy fewer impressions for the same spend.
+- **Data sources** footer and an agent **trace** (`PlanResult.trace`): every step with ms and status.
+- Badges: **LIVE · source · date** (fetched now), **ESTIMATE** (rate card, model, static calendar), **MOCK** (fixtures), **Not connected**.
+- Old saved plans have no `planVersion` and render exactly as before.
+
+`ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
+
 ## Vercel env vars
 
 Set these in the Vercel project **Settings → Environment Variables** (or a local `.env.local` copied from `.env.example`).
@@ -55,7 +81,8 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 | `GROQ_API_KEY` | No | LLM copy (checked first) |
 | `OPENAI_API_KEY` | No | LLM copy if Groq is unset |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | No | LLM copy if Groq and OpenAI are unset |
-| `POSTGRES_URL` | No | Persist plans + rate card across serverless instances |
+| `POSTGRES_URL` | No | Persist plans + rate card across serverless instances; also the `adpilot_cache` table for v2 data sources |
+| `ADPILOT_MOCK_APIS` | No | `1` = data sources read `fixtures/api/` instead of live APIs (local/demo/tests) |
 
 Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.
 

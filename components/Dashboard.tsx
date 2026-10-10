@@ -7,6 +7,7 @@ import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { CountUp, StoryScene } from "@/components/Motion";
 import { ReadinessCard } from "@/components/ReadinessCard";
+import { TimingCard } from "@/components/TimingCard";
 import { CHANNEL_COLORS } from "@/lib/colors";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
@@ -81,10 +82,12 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   }
 
   const readiness = plan.enrichment?.siteReadiness;
+  const calendar = plan.enrichment?.calendar;
   const chapterIds = [
     "cover",
     plan.product ? "read" : null,
     readiness ? "ready" : null,
+    calendar ? "timing" : null,
     "numbers",
     "mix",
     (plan.placements || []).length ? "post" : null,
@@ -192,6 +195,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         <StoryScene id="ready" className="story-chapter">
           <Chapter {...chapter("ready")} title="Before the first rupee" />
           <ReadinessCard signal={readiness} domain={plan.site?.domain || plan.input.domain} />
+        </StoryScene>
+      ) : null}
+
+      {calendar ? (
+        <StoryScene id="timing" className="story-chapter">
+          <Chapter {...chapter("timing")} title="Timing" />
+          <TimingCard signal={calendar} city={plan.input.city} />
         </StoryScene>
       ) : null}
 

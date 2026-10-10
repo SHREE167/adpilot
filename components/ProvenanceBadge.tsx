@@ -18,8 +18,8 @@ export function ProvenanceBadge({
   estimate?: boolean;
   className?: string;
 }) {
-  if (estimate) return <EstimateBadge className={className} />;
-  const kind = provenanceOf(signal);
+  const kind = estimate ? "estimate" : provenanceOf(signal);
+  if (kind === "estimate") return <EstimateBadge className={className} />;
   if (kind === "off") {
     return (
       <span

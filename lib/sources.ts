@@ -22,10 +22,14 @@ export function shortDate(iso: string): string {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 }
 
-export type Provenance = "live" | "mock" | "off";
+/** Static, unverified data shipped with the app: never LIVE, always ESTIMATE. */
+export const ESTIMATE_SOURCES = new Set(["festival_calendar"]);
+
+export type Provenance = "live" | "mock" | "estimate" | "off";
 
 export function provenanceOf(signal: Signal<unknown> | undefined): Provenance {
   if (!signal || signal.status !== "ok") return "off";
+  if (ESTIMATE_SOURCES.has(signal.source)) return "estimate";
   return signal.mock ? "mock" : "live";
 }
 

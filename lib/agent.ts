@@ -1,6 +1,7 @@
 import "server-only";
 import { allocateBudget } from "./allocate";
 import { templateCreative } from "./copy-templates";
+import { buildCalendar } from "./enrich/calendar";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
 import {
@@ -10,7 +11,7 @@ import {
   type PlanResult,
 } from "./types";
 import { newPlanId } from "./format";
-import { rollupForecast } from "./forecast";
+import { rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
 import { fillWithLlm, mergeCreative, recognizeWithLlm } from "./llm";
 import { mergeIntel, recognizeHeuristic } from "./recognize";
 import { getRateCard } from "./storage";
@@ -55,6 +56,7 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
       runEnrichment(
         {
           siteReadiness: () => buildReadiness(site, input),
+          calendar: () => buildCalendar(input, product.category),
         },
         (key, signal) => trace.signal(key, signal, "enrich")
       ),
@@ -70,14 +72,27 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
       scoreChannels(input, { category: product.category, priceTier: product.priceTier }, rateCard),
     { meta: (s) => ({ channels: s.length, rejected: s.filter((x) => x.rejected).length }) }
   );
+  // Step 5: signals that change the numbers (M1: festival-week CPM multipliers).
+  const season = await trace.span(
+    "signal_adjust",
+    (): SeasonAdjust | undefined => {
+      const cal = enrichment.calendar;
+      if (cal.status !== "ok" || !cal.data) return undefined;
+      return {
+        weekMultipliers: cal.data.weekMultipliers,
+        weekFestivals: cal.data.weekFestivals,
+      };
+    },
+    { meta: (s) => ({ seasonFactor: Math.round(seasonFactor(s) * 1000) / 1000 }) }
+  );
   const mix = await trace.span(
     "allocate",
-    () => allocateBudget(input, scores, rateCard, product.priceTier),
+    () => allocateBudget(input, scores, rateCard, product.priceTier, season),
     { meta: (m) => ({ channels: m.length }) }
   );
   const { totals, weeklyForecast } = await trace.span(
     "forecast",
-    () => rollupForecast(mix, input, product.priceTier),
+    () => rollupForecast(mix, input, product.priceTier, season),
     { meta: (f) => ({ impressions: f.totals.impressions, weeks: f.weeklyForecast.length }) }
   );
   const templates = await trace.span("copy_template", () =>

@@ -10,6 +10,7 @@ import {
   LineChart,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -96,6 +97,22 @@ export function WeeklyLine({ plan }: { plan: PlanResult }) {
           ]}
         />
         <Legend />
+        {plan.weeklyForecast
+          .filter((w) => (w.cpmMultiplier ?? 1) > 1)
+          .map((w) => (
+            <ReferenceLine
+              key={w.label}
+              x={w.label}
+              stroke="#e8c36a"
+              strokeDasharray="4 4"
+              label={{
+                value: `${w.festival || "Festival"} · CPM +${Math.round(((w.cpmMultiplier ?? 1) - 1) * 100)}% ESTIMATE`,
+                position: "insideTop",
+                fill: "#e8c36a",
+                fontSize: 11,
+              }}
+            />
+          ))}
         <Line type="monotone" dataKey="impressions" stroke="#8fb3ff" strokeWidth={2} dot={false} />
         <Line type="monotone" dataKey="clicks" stroke="#3ee0b1" strokeWidth={2} dot={false} />
         <Line type="monotone" dataKey="spend" stroke="#f5c16c" strokeWidth={2} dot={false} />

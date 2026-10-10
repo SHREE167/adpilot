@@ -170,6 +170,9 @@ export interface WeeklyPoint {
   impressions: number;
   clicks: number;
   spend: number;
+  /** v2 (F3): set only on festival weeks. */
+  cpmMultiplier?: number;
+  festival?: string;
 }
 
 export interface PlanTotals {
@@ -259,9 +262,41 @@ export interface SiteReadiness {
   funnelHint?: "whatsapp_dm";
 }
 
+export interface FestivalHit {
+  name: string;
+  /** ISO yyyy-mm-dd (main day). */
+  date: string;
+  /** Days from the plan start to the main day; negative = already started. */
+  daysAway: number;
+  states: string[];
+  /** ESTIMATE of festival-week CPM pressure (1.25 = +25%). */
+  cpmMultiplier: number;
+  advice: string;
+  verified: boolean;
+  /** Festival matters for this plan's category (CPM pressure applies regardless). */
+  relevant: boolean;
+  /** 1-based plan weeks this festival overlaps. */
+  weeks: number[];
+}
+
+/** F3: festival/season window for the plan's 4 weeks (static data, ESTIMATE). */
+export interface SeasonWindow {
+  state: string | null;
+  stateName: string | null;
+  windowStart: string;
+  windowEnd: string;
+  inWindow: FestivalHit[];
+  /** After the window, within the next 60 days. */
+  upcoming: FestivalHit[];
+  /** One per plan week; 1 = normal. */
+  weekMultipliers: number[];
+  weekFestivals: (string | null)[];
+}
+
 /** Every optional data source result attached to a plan (brief section 3). */
 export interface EnrichmentBundle {
   siteReadiness: Signal<SiteReadiness>;
+  calendar: Signal<SeasonWindow>;
   /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
   pageSpeed?: Signal<unknown>;
   localMarket?: Signal<unknown>;
