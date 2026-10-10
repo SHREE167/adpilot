@@ -1,0 +1,18 @@
+{
+  "_note": "Trimmed real PSI v5 response (mobile), recorded 2026-10-10T18:16:46.967Z. Only parsed fields kept.",
+  "id": "https://adpilot-olive-nine.vercel.app/",
+  "loadingExperience": {},
+  "lighthouseResult": {
+    "finalUrl": "https://adpilot-olive-nine.vercel.app/",
+    "categories": {
+      "performance": {
+        "score": 0.98
+      }
+    },
+    "audits": {
+      "largest-contentful-paint": {
+        "numericValue": 2341
+      }
+    }
+  }
+}

@@ -31,6 +31,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/enrich/cache.ts` | `adpilot_cache` in Postgres with TTL, or an in-memory Map fallback. |
 | `lib/enrich/mock.ts` | `ADPILOT_MOCK_APIS=1` fixture reader. |
 | `lib/enrich/site-readiness.ts` | F1 part A: tracking + funnel checks → readiness score + fixes. |
+| `lib/enrich/pagespeed.ts`, `lib/speed-rules.ts`, `components/SpeedCheck.tsx` | F1 part B: PSI v5 mobile score + LCP. Deferred: `checkPageSpeed` action runs after render (45s timeout, 24h cache); LCP > 4s becomes the first fix. |
 | `lib/enrich/calendar.ts` | F3: festival/season window + weekly CPM multipliers. |
 | `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
 | `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |

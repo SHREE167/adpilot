@@ -1,5 +1,7 @@
 import { ProvenanceBadge } from "@/components/ProvenanceBadge";
-import type { ReadinessCheck, Signal, SiteReadiness } from "@/lib/types";
+import { SpeedRow } from "@/components/SpeedCheck";
+import { speedFix } from "@/lib/speed-rules";
+import type { PageSpeedResult, ReadinessCheck, Signal, SiteReadiness } from "@/lib/types";
 
 const GLYPH: Record<ReadinessCheck["state"], { mark: string; tone: string; sr: string }> = {
   pass: { mark: "✓", tone: "text-mint border-mint/40 bg-mint/10", sr: "Pass" },
@@ -13,13 +15,20 @@ function verdict(score: number): string {
   return "Fix the site first.";
 }
 
-/** F1: the "Ready to spend?" chapter body. Score = ESTIMATE; checks = LIVE from the site. */
+/**
+ * F1: the "Ready to spend?" chapter body. Score = ESTIMATE; checks = LIVE from the site.
+ * Part B (PageSpeed) arrives after render; a slow page (LCP > 4s) becomes the first fix.
+ */
 export function ReadinessCard({
   signal,
   domain,
+  speed,
+  speedPending = false,
 }: {
   signal: Signal<SiteReadiness>;
   domain: string;
+  speed?: Signal<PageSpeedResult>;
+  speedPending?: boolean;
 }) {
   const r = signal.data;
 
@@ -42,7 +51,10 @@ export function ReadinessCard({
     );
   }
 
-  const open = r.checks.filter((c) => c.state !== "pass").length;
+  const slow = speed?.status === "ok" ? speedFix(speed.data) : null;
+  const fixes = slow ? [slow, ...r.fixes] : r.fixes;
+  const urgent = new Set([slow, r.funnelHint ? r.fixes[0] : null].filter(Boolean));
+  const open = r.checks.filter((c) => c.state !== "pass").length + (slow ? 1 : 0);
 
   return (
     <>
@@ -87,18 +99,19 @@ export function ReadinessCard({
             );
           })}
         </ul>
+        <SpeedRow signal={speed} pending={speedPending} />
       </div>
 
-      {r.fixes.length ? (
+      {fixes.length ? (
         <div className="story-bit mt-12 max-w-3xl">
           <h3 className="display text-3xl sm:text-4xl">
             {open > 0 ? "Fix these first" : "One more thing"}
           </h3>
           <ol className="mt-6 space-y-4">
-            {r.fixes.map((f, i) => (
+            {fixes.map((f, i) => (
               <li key={f} className="grid grid-cols-[2rem_1fr] text-xl leading-snug">
                 <span className="num text-sand">{i + 1}</span>
-                <span className={i === 0 && r.funnelHint ? "text-paper" : "text-fog"}>{f}</span>
+                <span className={urgent.has(f) ? "text-paper" : "text-fog"}>{f}</span>
               </li>
             ))}
           </ol>

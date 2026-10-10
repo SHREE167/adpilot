@@ -293,12 +293,25 @@ export interface SeasonWindow {
   weekFestivals: (string | null)[];
 }
 
+/** F1 part B: PageSpeed Insights v5, mobile. Fetched after render (deferred). */
+export interface PageSpeedResult {
+  url: string;
+  strategy: "mobile";
+  /** Lighthouse performance score, 0-100 (lab run). */
+  score: number;
+  /** Largest Contentful Paint from the lab run, ms. */
+  lcpMs: number;
+  /** Real-user (CrUX) LCP bucket when Google has field data for the page. */
+  fieldLcp?: "FAST" | "AVERAGE" | "SLOW";
+}
+
 /** Every optional data source result attached to a plan (brief section 3). */
 export interface EnrichmentBundle {
   siteReadiness: Signal<SiteReadiness>;
   calendar: Signal<SeasonWindow>;
   /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
-  pageSpeed?: Signal<unknown>;
+  /** Filled after render by the checkPageSpeed action; absent on the first response. */
+  pageSpeed?: Signal<PageSpeedResult>;
   localMarket?: Signal<unknown>;
   audience?: Signal<unknown>;
   creators?: Signal<unknown>;

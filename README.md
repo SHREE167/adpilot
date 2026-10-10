@@ -82,6 +82,7 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 | `OPENAI_API_KEY` | No | LLM copy if Groq is unset |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | No | LLM copy if Groq and OpenAI are unset |
 | `POSTGRES_URL` | No | Persist plans + rate card across serverless instances; also the `adpilot_cache` table for v2 data sources |
+| `PAGESPEED_API_KEY` | No | Mobile speed score + LCP in "Ready to spend?" (deferred after render, cached 24h). Restrict the key to the PageSpeed Insights API |
 | `ADPILOT_MOCK_APIS` | No | `1` = data sources read `fixtures/api/` instead of live APIs (local/demo/tests) |
 
 Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.
