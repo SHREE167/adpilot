@@ -7,6 +7,7 @@ import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { CountUp, StoryScene } from "@/components/Motion";
 import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
+import { PlanHealth } from "@/components/PlanHealth";
 import { ReadinessCard } from "@/components/ReadinessCard";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
@@ -143,6 +144,8 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         ))}
       </nav>
 
+      <PlanHealth plan={plan} speed={speed} />
+
       <StoryScene id="cover" className="story-chapter">
         <Chapter {...chapter("cover")} title="Cover" />
         <p className="story-bit kicker">A plan for {plan.input.city}</p>
@@ -209,6 +212,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             domain={plan.site?.domain || plan.input.domain}
             speed={speed.signal}
             speedPending={speed.pending}
+            speedStartedAt={speed.startedAt}
           />
         </StoryScene>
       ) : null}

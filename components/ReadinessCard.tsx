@@ -24,11 +24,13 @@ export function ReadinessCard({
   domain,
   speed,
   speedPending = false,
+  speedStartedAt = null,
 }: {
   signal: Signal<SiteReadiness>;
   domain: string;
   speed?: Signal<PageSpeedResult>;
   speedPending?: boolean;
+  speedStartedAt?: number | null;
 }) {
   const r = signal.data;
 
@@ -99,7 +101,7 @@ export function ReadinessCard({
             );
           })}
         </ul>
-        <SpeedRow signal={speed} pending={speedPending} />
+        <SpeedRow signal={speed} pending={speedPending} startedAt={speedStartedAt} />
       </div>
 
       {fixes.length ? (
