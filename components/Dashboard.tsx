@@ -6,6 +6,7 @@ import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
 import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { CountUp, StoryScene } from "@/components/Motion";
+import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { ReadinessCard } from "@/components/ReadinessCard";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
@@ -85,10 +86,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const readiness = plan.enrichment?.siteReadiness;
   const speed = usePageSpeed(plan);
   const calendar = plan.enrichment?.calendar;
+  const localMarket = plan.enrichment?.localMarket;
+  const showLocal = showLocalMarket(localMarket);
   const chapterIds = [
     "cover",
     plan.product ? "read" : null,
     readiness ? "ready" : null,
+    showLocal ? "local" : null,
     calendar ? "timing" : null,
     "numbers",
     "mix",
@@ -202,6 +206,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             speed={speed.signal}
             speedPending={speed.pending}
           />
+        </StoryScene>
+      ) : null}
+
+      {localMarket && showLocal ? (
+        <StoryScene id="local" className="story-chapter">
+          <Chapter {...chapter("local")} title="Your street" />
+          <LocalMarketCard signal={localMarket} city={plan.input.city} />
         </StoryScene>
       ) : null}
 

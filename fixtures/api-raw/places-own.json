@@ -1,0 +1,40 @@
+{
+  "_note": "Real Places API (New) Text Search, \"Campus Crunch Chennai\", mask \"places.displayName,places.googleMapsUri\", recorded 2026-10-10T18:23:29.992Z.",
+  "places": [
+    {
+      "googleMapsUri": "https://maps.google.com/?cid=16915770870744720999&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "displayName": {
+        "text": "SIP N' CRUNCH",
+        "languageCode": "en"
+      }
+    },
+    {
+      "googleMapsUri": "https://maps.google.com/?cid=15308790761857949274&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "displayName": {
+        "text": "Cream & Crunch",
+        "languageCode": "en"
+      }
+    },
+    {
+      "googleMapsUri": "https://maps.google.com/?cid=10621970887136241287&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "displayName": {
+        "text": "WE CRUNCH x Fresh Factory",
+        "languageCode": "en"
+      }
+    },
+    {
+      "googleMapsUri": "https://maps.google.com/?cid=7879886279710480958&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "displayName": {
+        "text": "We Crunch",
+        "languageCode": "en"
+      }
+    },
+    {
+      "googleMapsUri": "https://maps.google.com/?cid=9502563353802394567&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "displayName": {
+        "text": "We Chai & We Crunch",
+        "languageCode": "en"
+      }
+    }
+  ]
+}

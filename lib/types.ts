@@ -305,6 +305,35 @@ export interface PageSpeedResult {
   fieldLcp?: "FAST" | "AVERAGE" | "SLOW";
 }
 
+/** One public business from Places Text Search (name + rating only; no address, phone or reviews). */
+export interface PlaceSummary {
+  name: string;
+  rating?: number;
+  reviews?: number;
+}
+
+/** F2: "{keyword} in {city}" competitors + whether the business itself is on Google Maps. */
+export interface LocalMarket {
+  /** The exact competitor query sent, e.g. "snack shop in Chennai". */
+  query: string;
+  keyword: string;
+  /** Places returned on the first page (max 20). */
+  count: number;
+  /** Google had more than one page: show "20+". */
+  more: boolean;
+  /** Mean rating of the rated places, 1 decimal; null when none are rated. */
+  avgRating: number | null;
+  ratedCount: number;
+  /** Up to 5, best rated among places with at least 10 reviews. */
+  top: PlaceSummary[];
+  own: {
+    query: string;
+    found: boolean;
+    name?: string;
+    mapsUri?: string;
+  };
+}
+
 /** Every optional data source result attached to a plan (brief section 3). */
 export interface EnrichmentBundle {
   siteReadiness: Signal<SiteReadiness>;
@@ -312,7 +341,7 @@ export interface EnrichmentBundle {
   /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
   /** Filled after render by the checkPageSpeed action; absent on the first response. */
   pageSpeed?: Signal<PageSpeedResult>;
-  localMarket?: Signal<unknown>;
+  localMarket?: Signal<LocalMarket>;
   audience?: Signal<unknown>;
   creators?: Signal<unknown>;
   searchDemand?: Signal<unknown>;

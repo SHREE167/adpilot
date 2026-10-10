@@ -2,6 +2,7 @@ import "server-only";
 import { allocateBudget } from "./allocate";
 import { templateCreative } from "./copy-templates";
 import { buildCalendar } from "./enrich/calendar";
+import { fetchLocalMarket } from "./enrich/places";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
 import {
@@ -57,6 +58,7 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
         {
           siteReadiness: () => buildReadiness(site, input),
           calendar: () => buildCalendar(input, product.category),
+          localMarket: () => fetchLocalMarket(input, product),
         },
         (key, signal) => trace.signal(key, signal, "enrich")
       ),
