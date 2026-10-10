@@ -20,6 +20,7 @@ import { lookupPlacements } from "./placements";
 import { scrapeSite } from "./scrape";
 import { scoreChannels } from "./scoring";
 import { createTrace } from "./trace";
+import { buildZeroRupee } from "./zero-rupee";
 
 const BUDGET_MS = 14000;
 
@@ -87,6 +88,18 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
     },
     { meta: (s) => ({ seasonFactor: Math.round(seasonFactor(s) * 1000) / 1000 }) }
   );
+  // F10: free actions before the paid mix, ranked from signals + brief.
+  const zeroRupee = await trace.span(
+    "zero_rupee",
+    () =>
+      buildZeroRupee({
+        input,
+        category: product.category,
+        readiness: enrichment.siteReadiness,
+        localMarket: enrichment.localMarket,
+      }),
+    { meta: (z) => ({ items: z.length, ...(z[0] ? { first: z[0].id } : {}) }) }
+  );
   const mix = await trace.span(
     "allocate",
     () => allocateBudget(input, scores, rateCard, product.priceTier, season),
@@ -152,6 +165,7 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
     scorer: "xgboost",
     planVersion: 2,
     enrichment,
+    zeroRupee,
     trace: planTrace,
   };
 }

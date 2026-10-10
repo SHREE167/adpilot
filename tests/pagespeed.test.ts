@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
+import { checkPageSpeed } from "@/app/actions";
+import { runAgent } from "@/lib/agent";
 import { cacheClearMemory } from "@/lib/enrich/cache";
 import {
   fetchPageSpeed,
@@ -10,7 +12,9 @@ import {
   type PsiResponse,
 } from "@/lib/enrich/pagespeed";
 import { runSource } from "@/lib/enrich/signal";
+import { SNACK_CHENNAI } from "@/lib/fixtures";
 import { speedBand, speedFix } from "@/lib/speed-rules";
+import { getPlan, savePlan } from "@/lib/storage";
 import type { PageSpeedResult } from "@/lib/types";
 
 const raw = JSON.parse(
@@ -124,5 +128,32 @@ describe("fetchPageSpeed", () => {
     assert.equal(s.mock, true);
     assert.equal(s.data?.strategy, "mobile");
     assert.ok((s.data?.score ?? -1) >= 0);
+  });
+});
+
+describe("checkPageSpeed action (deferred)", () => {
+  it("fills enrichment.pageSpeed on the stored plan after the fact (mock mode)", async () => {
+    process.env.ADPILOT_MOCK_APIS = "1";
+    const plan = await runAgent(SNACK_CHENNAI);
+    assert.equal(plan.enrichment?.pageSpeed, undefined, "the plan itself never waits on PageSpeed");
+    await savePlan(plan);
+    const s = await checkPageSpeed(plan.id);
+    assert.equal(s.status, "ok");
+    assert.equal(s.mock, true);
+    assert.equal((await getPlan(plan.id))?.enrichment?.pageSpeed?.status, "ok");
+  });
+
+  it("skips a stored plan whose site was never reached (zero-key sample)", async () => {
+    const plan = await runAgent(SNACK_CHENNAI);
+    await savePlan(plan);
+    const s = await checkPageSpeed(plan.id, "https://attacker-chosen.example.com/");
+    assert.equal(s.status, "skipped");
+    assert.match(s.reason || "", /not reachable/);
+  });
+
+  it("unknown plan: only a public client URL is accepted", async () => {
+    const s = await checkPageSpeed("ap_missing", "http://localhost:3000/");
+    assert.equal(s.status, "skipped");
+    assert.match(s.reason || "", /no public site URL/);
   });
 });

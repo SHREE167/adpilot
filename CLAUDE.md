@@ -34,6 +34,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/enrich/pagespeed.ts`, `lib/speed-rules.ts`, `components/SpeedCheck.tsx` | F1 part B: PSI v5 mobile score + LCP. Deferred: `checkPageSpeed` action runs after render (45s timeout, 24h cache); LCP > 4s becomes the first fix. |
 | `lib/enrich/places.ts`, `components/LocalMarketCard.tsx` | F2: Places Text Search (competitors: Enterprise mask with rating; own name: Pro mask), 7d cache, skipped for B2B/SaaS/online-only. Raw recorded responses in `fixtures/api-raw/`. |
 | `lib/enrich/calendar.ts` | F3: festival/season window + weekly CPM multipliers. |
+| `lib/zero-rupee.ts`, `components/ZeroRupeeCard.tsx` | F10: pure rule ranking (readiness, Places, category, goal, budget) → up to 4 free actions with a `why`; `PlanResult.zeroRupee`. |
 | `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
 | `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |
 | `lib/recognize.ts`, `lib/llm.ts` | Heuristic product intel + optional LLM (Groq → OpenAI → Gemini). |

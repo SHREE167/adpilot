@@ -211,6 +211,8 @@ export interface PlanResult {
   /** v2 fields are optional so v1 plans (localStorage + Postgres) still render. */
   planVersion?: 2;
   enrichment?: EnrichmentBundle;
+  /** F10: free actions before any paid spend (rule-based, from signals + brief). */
+  zeroRupee?: ZeroRupeeItem[];
   trace?: PlanTrace;
 }
 
@@ -332,6 +334,24 @@ export interface LocalMarket {
     name?: string;
     mapsUri?: string;
   };
+}
+
+export type ZeroRupeeId =
+  | "gbp"
+  | "gbp_reviews"
+  | "whatsapp_catalog"
+  | "organic_reels"
+  | "local_groups"
+  | "founder_linkedin";
+
+/** F10: one free action. `why` cites the signal or brief detail that triggered it. */
+export interface ZeroRupeeItem {
+  id: ZeroRupeeId;
+  title: string;
+  why: string;
+  steps: string[];
+  /** Signal sources quoted in `why` (badged in the UI); empty = from the brief only. */
+  sources: string[];
 }
 
 /** Every optional data source result attached to a plan (brief section 3). */

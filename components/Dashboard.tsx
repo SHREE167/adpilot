@@ -10,10 +10,11 @@ import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { ReadinessCard } from "@/components/ReadinessCard";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
+import { ZeroRupeeCard } from "@/components/ZeroRupeeCard";
 import { CHANNEL_COLORS } from "@/lib/colors";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
-import type { PlacementPick, PlanResult } from "@/lib/types";
+import type { PlacementPick, PlanResult, Signal } from "@/lib/types";
 
 const KIND_LABEL: Record<string, string> = {
   google_site: "Google site (GDN)",
@@ -88,11 +89,14 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const calendar = plan.enrichment?.calendar;
   const localMarket = plan.enrichment?.localMarket;
   const showLocal = showLocalMarket(localMarket);
+  const zeroRupee = plan.zeroRupee || [];
+  const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const chapterIds = [
     "cover",
     plan.product ? "read" : null,
     readiness ? "ready" : null,
     showLocal ? "local" : null,
+    zeroRupee.length ? "free" : null,
     calendar ? "timing" : null,
     "numbers",
     "mix",
@@ -213,6 +217,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         <StoryScene id="local" className="story-chapter">
           <Chapter {...chapter("local")} title="Your street" />
           <LocalMarketCard signal={localMarket} city={plan.input.city} />
+        </StoryScene>
+      ) : null}
+
+      {zeroRupee.length ? (
+        <StoryScene id="free" className="story-chapter">
+          <Chapter {...chapter("free")} title="Before you spend anything" />
+          <ZeroRupeeCard items={zeroRupee} signals={signals} />
         </StoryScene>
       ) : null}
 

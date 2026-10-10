@@ -53,3 +53,28 @@ describe("runAgent (zero keys)", () => {
     assert.equal(plan.mix.reduce((s, r) => s + r.budget, 0), SNACK_CHENNAI.budget);
   });
 });
+
+describe("runAgent (M2 sources)", () => {
+  it("zero keys: Places skipped, mix unchanged by it, zero-rupee from the brief only", async () => {
+    const plan = await runAgent(SNACK_CHENNAI);
+    assert.equal(plan.enrichment?.localMarket?.status, "skipped");
+    assert.equal(plan.enrichment?.pageSpeed, undefined, "PageSpeed is deferred, never in the first response");
+    assert.ok(plan.trace?.spans.some((s) => s.name === "localMarket" && s.parent === "enrich"));
+    assert.ok(plan.trace?.spans.some((s) => s.name === "zero_rupee"));
+    assert.ok((plan.zeroRupee || []).every((i) => !i.id.startsWith("gbp")));
+  });
+
+  it("mock mode: Places fixture → 'not on Maps' leads the zero-rupee list, offline", async () => {
+    process.env.ADPILOT_MOCK_APIS = "1";
+    try {
+      const plan = await runAgent(SNACK_CHENNAI);
+      const lm = plan.enrichment?.localMarket;
+      assert.equal(lm?.status, "ok");
+      assert.equal(lm?.mock, true);
+      assert.equal(plan.zeroRupee?.[0]?.id, "gbp");
+      assert.equal(plan.mix.reduce((s, r) => s + r.budget, 0), SNACK_CHENNAI.budget);
+    } finally {
+      delete process.env.ADPILOT_MOCK_APIS;
+    }
+  });
+});

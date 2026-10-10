@@ -53,8 +53,8 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | # | Scope | Status |
 | --- | --- | --- |
 | M1 | Enrichment framework (Signal, timeouts, cache, mock mode), agent trace, LIVE/ESTIMATE badges, site readiness (tracking + funnel), festival calendar | done |
-| M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | next |
-| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | |
+| M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
+| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | next |
 | M4 | Meta reach, YouTube creators, launch kit + grounding guard | |
 | M5 | Budget slider, forecast ranges | |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
@@ -69,6 +69,13 @@ What M1 adds to every plan:
 - **Data sources** footer and an agent **trace** (`PlanResult.trace`): every step with ms and status.
 - Badges: **LIVE · source · date** (fetched now), **ESTIMATE** (rate card, model, static calendar), **MOCK** (fixtures), **Not connected**.
 - Old saved plans have no `planVersion` and render exactly as before.
+
+What M2 adds:
+
+- **Mobile speed (PageSpeed, deferred)**: after the dashboard renders, it asks the server for a PageSpeed Insights v5 mobile run (score + LCP, cached 24h). The plan never waits on it. LCP over 4s becomes the first fix in "Ready to spend?". Needs `PAGESPEED_API_KEY`.
+- **Your street (Google Places)**: "{keyword} in {city}" competitors (count, average rating, top 5) and a search for the business itself ("Not on Google Maps: create a free Business Profile"). Strict field masks, 7-day cache, only public names and ratings kept. Skipped for SaaS/B2B/online-only briefs. Needs `GOOGLE_PLACES_API_KEY`.
+- **Before you spend anything (zero-rupee)**: up to 4 free actions ranked from signals and the brief (Business Profile, WhatsApp Business catalog + Status, organic Reels, local groups, founder LinkedIn). Each item says why; no item fires without a reason.
+- Market density feeds the zero-rupee layer and the store_visits ranking. Using it in ad copy waits for the grounded launch kit (F7, M4), so copy never quotes a number the LLM could change.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 
