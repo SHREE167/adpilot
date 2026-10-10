@@ -220,5 +220,6 @@ npm run dev      # local
 npm run build    # production build
 npm run start    # serve the build
 npm run lint
+npm test         # node:test unit tests (no extra deps)
 npm run train-model   # retrain XGBoost (needs ml/.venv)
 ```

@@ -190,6 +190,26 @@ export interface PlanResult {
   scorer: "xgboost";
 }
 
+/* ---------- v2 enrichment (client-safe types; logic lives in lib/enrich) ---------- */
+
+export type SignalStatus = "ok" | "skipped" | "timeout" | "error";
+
+/** One optional data source result. Never thrown; always returned. */
+export interface Signal<T> {
+  /** "site_readiness", "festival_calendar", "google_places", ... */
+  source: string;
+  status: SignalStatus;
+  /** ISO time of the original fetch (kept on cache hits). */
+  fetchedAt: string;
+  ms: number;
+  cached: boolean;
+  /** True when read from fixtures/api (ADPILOT_MOCK_APIS=1). Never shown as LIVE. */
+  mock?: boolean;
+  data?: T;
+  /** "no API key", "HTTP 403", ... */
+  reason?: string;
+}
+
 export interface PlanListItem {
   id: string;
   createdAt: string;
