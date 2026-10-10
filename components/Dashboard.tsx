@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
+import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { CountUp, StoryScene } from "@/components/Motion";
 import { CHANNEL_COLORS } from "@/lib/colors";
@@ -78,6 +79,23 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
+  const chapterIds = [
+    "cover",
+    plan.product ? "read" : null,
+    "numbers",
+    "mix",
+    (plan.placements || []).length ? "post" : null,
+    "charts",
+    "cuts",
+    "ads",
+    "outreach",
+  ].filter((id): id is string => Boolean(id));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const chapter = (id: string) => ({
+    n: pad(chapterIds.indexOf(id) + 1),
+    of: pad(chapterIds.length),
+  });
+
   const cpa = plan.totals.estimatedCpa;
   const kpis = useMemo(
     () => [
@@ -102,7 +120,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   return (
     <div className="story-reel">
       <nav className="story-dots hidden lg:flex">
-        {["cover", "read", "numbers", "mix", "post", "charts", "cuts", "ads", "outreach"].map((id, i) => (
+        {[...chapterIds, "sources"].map((id, i) => (
           <a key={id} href={`#${id}`} className="story-dot" title={id}>
             {String(i + 1).padStart(2, "0")}
           </a>
@@ -110,7 +128,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       </nav>
 
       <StoryScene id="cover" className="story-chapter">
-        <Chapter n="01" of="09" title="Cover" />
+        <Chapter {...chapter("cover")} title="Cover" />
         <p className="story-bit kicker">A plan for {plan.input.city}</p>
         <h1 className="story-bit display mt-4 max-w-[18ch] text-6xl leading-[0.9] sm:text-8xl">
           {name}
@@ -138,7 +156,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
 
       {plan.product ? (
         <StoryScene id="read" className="story-chapter">
-          <Chapter n="02" of="09" title="We read the product" />
+          <Chapter {...chapter("read")} title="We read the product" />
           <h2 className="story-bit display text-5xl leading-[0.95] sm:text-7xl">
             {plan.product.recognizedName}
           </h2>
@@ -168,7 +186,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       ) : null}
 
       <StoryScene id="numbers" className="story-chapter">
-        <Chapter n="03" of="09" title="The estimate" />
+        <Chapter {...chapter("numbers")} title="The estimate" />
         <h2 className="story-bit display mb-16 text-5xl sm:text-7xl">What ₹ buys.</h2>
         <div className="grid gap-16">
           {kpis.map((k) => (
@@ -194,8 +212,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             className="story-chapter"
           >
             <Chapter
-              n="04"
-              of="09"
+              {...chapter("mix")}
               title={`Channel ${i + 1} of ${plan.mix.length}`}
             />
             <p className="story-bit inline-flex items-center gap-3 text-xl">
@@ -225,7 +242,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       {(plan.placements || []).length ? (
         <div id="post">
           <StoryScene className="story-chapter">
-            <Chapter n="05" of="09" title="Where to actually post" />
+            <Chapter {...chapter("post")} title="Where to actually post" />
             <h2 className="story-bit display max-w-[14ch] text-5xl leading-[0.92] sm:text-7xl">
               Not “Google”. These sites and apps.
             </h2>
@@ -242,7 +259,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       ) : null}
 
       <StoryScene id="charts" className="story-chapter">
-        <Chapter n="06" of="09" title="The pictures" />
+        <Chapter {...chapter("charts")} title="The pictures" />
         <h2 className="story-bit display mb-12 text-5xl sm:text-7xl">Mix, reach, weeks.</h2>
         <div className="grid gap-10">
           <div className="story-bit card p-6 sm:p-10">
@@ -261,7 +278,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       </StoryScene>
 
       <StoryScene id="cuts" className="story-chapter">
-        <Chapter n="07" of="09" title="What we cut" />
+        <Chapter {...chapter("cuts")} title="What we cut" />
         <h2 className="story-bit display mb-12 text-5xl sm:text-7xl">Not these.</h2>
         <ul className="space-y-12">
           {plan.rejected.map((r) => (
@@ -282,7 +299,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       <div id="ads">
         {plan.adAngles.map((a, i) => (
           <StoryScene key={a.headline} className="story-chapter">
-            <Chapter n="08" of="09" title={`Ad angle ${i + 1}`} />
+            <Chapter {...chapter("ads")} title={`Ad angle ${i + 1}`} />
             <h2 className="story-bit display max-w-[16ch] text-5xl leading-[0.95] sm:text-7xl">
               {a.headline}
             </h2>
@@ -302,7 +319,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       <div id="outreach">
         {plan.outreach.map((o, i) => (
           <StoryScene key={`${o.channel}-${i}`} className="story-chapter">
-            <Chapter n="09" of="09" title={`Script ${i + 1} of ${plan.outreach.length}`} />
+            <Chapter {...chapter("outreach")} title={`Script ${i + 1} of ${plan.outreach.length}`} />
             <p className="story-bit text-xl uppercase tracking-[0.2em] text-mint">
               {o.channel}
             </p>
@@ -313,6 +330,8 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
           </StoryScene>
         ))}
       </div>
+
+      <DataSources plan={plan} />
     </div>
   );
 }

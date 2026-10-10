@@ -188,6 +188,10 @@ export interface PlanResult {
   estimateLabel: "ESTIMATE";
   agentMs: number;
   scorer: "xgboost";
+  /** v2 fields are optional so v1 plans (localStorage + Postgres) still render. */
+  planVersion?: 2;
+  enrichment?: EnrichmentBundle;
+  trace?: PlanTrace;
 }
 
 /* ---------- v2 enrichment (client-safe types; logic lives in lib/enrich) ---------- */
@@ -208,6 +212,35 @@ export interface Signal<T> {
   data?: T;
   /** "no API key", "HTTP 403", ... */
   reason?: string;
+}
+
+/** Every optional data source result attached to a plan (brief section 3). */
+export interface EnrichmentBundle {
+  /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
+  pageSpeed?: Signal<unknown>;
+  localMarket?: Signal<unknown>;
+  audience?: Signal<unknown>;
+  creators?: Signal<unknown>;
+  searchDemand?: Signal<unknown>;
+}
+
+export type TraceMeta = Record<string, string | number | boolean>;
+
+/** One agent step or tool call (F15). Times are ms from the trace start. */
+export interface TraceSpan {
+  name: string;
+  parent?: string;
+  startMs: number;
+  ms: number;
+  status: SignalStatus;
+  meta?: TraceMeta;
+  error?: string;
+}
+
+export interface PlanTrace {
+  startedAt: string;
+  totalMs: number;
+  spans: TraceSpan[];
 }
 
 export interface PlanListItem {

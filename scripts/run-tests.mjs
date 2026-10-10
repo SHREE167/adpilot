@@ -25,7 +25,11 @@ if (!files.length) {
 }
 
 const hooks = pathToFileURL(path.join(root, "scripts", "test-hooks.mjs")).href;
+// Tests always run in zero-key mode: no Postgres, no LLM, no live APIs.
 const env = { ...process.env, ADPILOT_MOCK_APIS: "", POSTGRES_URL: "" };
+for (const k of Object.keys(env)) {
+  if (/_API_KEY$|_ACCESS_TOKEN$/.test(k)) env[k] = "";
+}
 const result = spawnSync(
   process.execPath,
   ["--import", hooks, "--conditions=react-server", "--test", ...files],
