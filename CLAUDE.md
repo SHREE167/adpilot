@@ -43,7 +43,8 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/allocate.ts`, `lib/forecast.ts` | Pure: 2–5 channels, 50% cap, sum == budget; rate-card math + weekly rollup with season multipliers. |
 | `lib/storage.ts`, `lib/rate-card.ts` | Postgres (`adpilot_plans`, `adpilot_rate_card`) or memory + localStorage. |
 | `lib/types.ts` | `PlanResult` contract, including Signal/Enrichment/Trace types (client-safe). |
-| `app/actions.ts`, `app/page.tsx` | Server Actions (`createPlan` → `runAgent`); `maxDuration = 60`. |
+| `app/actions.ts`, `app/page.tsx` | Server Actions (`createPlan` → `runAgent`, `checkPageSpeed`); `maxDuration = 60`. |
+| `app/api/plan/route.ts`, `lib/plan-progress.ts`, `components/PipelineProgress.tsx` | Streamed build: NDJSON of trace events (`createTrace(now, onEvent)`), then the plan. Form falls back to `createPlan` if no stream. |
 | `components/Dashboard.tsx` | Story-scroll result view (glass/gold, Fraunces + Syne, anime.js). |
 | `components/ProvenanceBadge.tsx`, `ReadinessCard.tsx`, `TimingCard.tsx`, `DataSources.tsx` | LIVE / ESTIMATE / Not connected badges and the v2 cards. |
 | `fixtures/` | Sample briefs, v1 plan snapshots, `fixtures/api/<source>/` mock fixtures. |

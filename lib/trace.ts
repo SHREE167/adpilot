@@ -1,4 +1,4 @@
-import type { PlanTrace, Signal, TraceMeta, TraceSpan } from "./types";
+import type { PlanTrace, Signal, TraceEvent, TraceMeta, TraceSpan } from "./types";
 
 export interface SpanOptions<T> {
   parent?: string;
@@ -21,14 +21,38 @@ function message(err: unknown): string {
   return err instanceof Error ? err.message.slice(0, 160) : "unknown error";
 }
 
-/** F15: the agent's observability layer. One trace per runAgent call. */
-export function createTrace(now: () => number = Date.now): Trace {
+export type TraceListener = (event: TraceEvent) => void;
+
+/**
+ * F15: the agent's observability layer. One trace per runAgent call.
+ * onEvent (optional) receives each step as it starts and settles, for live progress.
+ * A listener that throws is ignored: progress must never break a plan.
+ */
+export function createTrace(now: () => number = Date.now, onEvent?: TraceListener): Trace {
   const t0 = now();
   const spans: TraceSpan[] = [];
+  const emit = (e: TraceEvent) => {
+    if (!onEvent) return;
+    try {
+      onEvent(e);
+    } catch {
+      /* progress is best-effort */
+    }
+  };
+  const settled = (s: TraceSpan, reason?: string) =>
+    emit({
+      name: s.name,
+      ...(s.parent ? { parent: s.parent } : {}),
+      status: s.status,
+      atMs: s.startMs + s.ms,
+      ms: s.ms,
+      ...(reason ? { reason } : {}),
+    });
 
   return {
     async span(name, fn, opts = {}) {
       const start = now();
+      emit({ name, ...(opts.parent ? { parent: opts.parent } : {}), status: "running", atMs: start - t0 });
       try {
         const result = await fn();
         const meta = typeof opts.meta === "function" ? opts.meta(result) : opts.meta;
@@ -40,6 +64,7 @@ export function createTrace(now: () => number = Date.now): Trace {
           status: "ok",
           ...(meta ? { meta } : {}),
         });
+        settled(spans[spans.length - 1]);
         return result;
       } catch (err) {
         spans.push({
@@ -50,12 +75,14 @@ export function createTrace(now: () => number = Date.now): Trace {
           status: "error",
           error: message(err),
         });
+        settled(spans[spans.length - 1], message(err));
         throw err;
       }
     },
 
     skip(name, reason, parent) {
       spans.push({ name, parent, startMs: now() - t0, ms: 0, status: "skipped", meta: { reason } });
+      settled(spans[spans.length - 1], reason);
     },
 
     signal(name, s, parent) {
@@ -70,6 +97,7 @@ export function createTrace(now: () => number = Date.now): Trace {
         status: s.status,
         meta,
       });
+      settled(spans[spans.length - 1], s.reason);
     },
 
     elapsed() {

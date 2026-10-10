@@ -380,6 +380,24 @@ export interface TraceSpan {
   error?: string;
 }
 
+/** Live pipeline progress (streamed while a plan builds). Mirrors TraceSpan as it happens. */
+export interface TraceEvent {
+  name: string;
+  parent?: string;
+  status: "running" | SignalStatus;
+  /** ms since the run started. */
+  atMs: number;
+  /** Step duration; absent while running. */
+  ms?: number;
+  reason?: string;
+}
+
+/** NDJSON lines from POST /api/plan. */
+export type PlanStreamEvent =
+  | ({ type: "step" } & TraceEvent)
+  | { type: "done"; plan: PlanResult }
+  | { type: "error"; message: string };
+
 export interface PlanTrace {
   startedAt: string;
   totalMs: number;

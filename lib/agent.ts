@@ -19,7 +19,7 @@ import { getRateCard } from "./storage";
 import { lookupPlacements } from "./placements";
 import { scrapeSite } from "./scrape";
 import { scoreChannels } from "./scoring";
-import { createTrace } from "./trace";
+import { createTrace, type TraceListener } from "./trace";
 import { buildZeroRupee } from "./zero-rupee";
 
 const BUDGET_MS = 14000;
@@ -28,8 +28,11 @@ const BUDGET_MS = 14000;
  * 1 scrape → 2 recognize product → 3 enrich (parallel, optional) → 4 XGBoost
  * → 5 signal adjust → 6 allocate → 7 forecast → 8 copy. Every step is a trace span.
  */
-export async function runAgent(input: PlanInput): Promise<PlanResult> {
-  const trace = createTrace();
+export async function runAgent(
+  input: PlanInput,
+  opts: { onEvent?: TraceListener } = {}
+): Promise<PlanResult> {
+  const trace = createTrace(Date.now, opts.onEvent);
   const remaining = () => BUDGET_MS - trace.elapsed();
 
   const site = await trace.span("scrape", () => scrapeSite(input.domain, input.product_name), {

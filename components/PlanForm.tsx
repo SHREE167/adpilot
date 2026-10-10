@@ -4,9 +4,17 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { createPlan } from "@/app/actions";
 import { StoryScene } from "@/components/Motion";
+import { PipelineProgress } from "@/components/PipelineProgress";
 import { savePlanLocal } from "@/lib/client-storage";
 import { SAMPLE_FIXTURES } from "@/lib/fixtures";
-import { GOALS, LANGUAGES, type PlanInput } from "@/lib/types";
+import {
+  applyStepEvent,
+  closeSteps,
+  initialSteps,
+  readPlanStream,
+  type StepRow,
+} from "@/lib/plan-progress";
+import { GOALS, LANGUAGES, type PlanInput, type PlanResult } from "@/lib/types";
 
 const STEPS = [
   "Read the live page (title, H1, JSON-LD)",
@@ -35,7 +43,10 @@ export function PlanForm() {
   const [form, setForm] = useState<PlanInput>(empty);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
+  const [rows, setRows] = useState<StepRow[] | null>(null);
+  const [clockBase, setClockBase] = useState<number | null>(null);
+  const [totalMs, setTotalMs] = useState<number | undefined>(undefined);
+  const [note, setNote] = useState<string | null>(null);
 
   const canSubmit = useMemo(
     () => form.product_name.trim() && form.city.trim() && form.budget >= 500,
@@ -46,28 +57,79 @@ export function PlanForm() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function finish(plan: PlanResult) {
+    setTotalMs(plan.trace?.totalMs ?? plan.agentMs);
+    savePlanLocal(plan);
+    router.push(`/plans/${plan.id}`);
+  }
+
+  function fail(message: string) {
+    setRows((r) => (r ? closeSteps(r, true) : r));
+    setError(message);
+    setBusy(false);
+  }
+
+  /** No stream at all (old proxy, network): the Server Action, honestly labelled. */
+  async function runWithoutProgress() {
+    setNote("Live progress is unavailable on this connection. Waiting for the full plan…");
+    const result = await createPlan(form);
+    if ("error" in result) return fail(result.error);
+    finish(result.plan);
+  }
+
+  async function run() {
     if (!canSubmit || busy) return;
     setBusy(true);
     setError(null);
-    setStep(0);
-    const tick = window.setInterval(() => {
-      setStep((s) => (s < STEPS.length - 1 ? s + 1 : s));
-    }, 700);
+    setNote(null);
+    setTotalMs(undefined);
+    setClockBase(null);
+    setRows(initialSteps());
+
+    let events = 0;
+    let plan: PlanResult | null = null;
+    let streamError: string | null = null;
     try {
-      const result = await createPlan(form);
-      if ("error" in result) {
-        throw new Error(result.error);
+      const res = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok || !res.body) {
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        if (body?.message) return fail(body.message);
+        throw new Error(`HTTP ${res.status}`);
       }
-      savePlanLocal(result.plan);
-      router.push(`/plans/${result.plan.id}`);
+      await readPlanStream(res.body, (ev) => {
+        events++;
+        if (ev.type === "step") {
+          setClockBase((b) => b ?? performance.now() - ev.atMs);
+          setRows((r) => applyStepEvent(r ?? initialSteps(), ev));
+        } else if (ev.type === "done") {
+          plan = ev.plan;
+        } else {
+          streamError = ev.message;
+        }
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not build the plan");
-      setBusy(false);
-    } finally {
-      window.clearInterval(tick);
+      if (events === 0) {
+        try {
+          return await runWithoutProgress();
+        } catch (err2) {
+          return fail(err2 instanceof Error ? err2.message : "Could not build the plan");
+        }
+      }
+      return fail(
+        `Connection lost while the plan was building (${err instanceof Error ? err.message : "network"}). Try again.`
+      );
     }
+    if (plan) return finish(plan);
+    fail(streamError || "The server closed the connection before the plan finished. Try again.");
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void run();
   }
 
   return (
@@ -200,11 +262,6 @@ export function PlanForm() {
           </div>
         </div>
 
-        {error ? (
-          <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
           <button className="btn btn-primary text-lg" disabled={!canSubmit || busy} type="submit">
@@ -214,27 +271,44 @@ export function PlanForm() {
             Agent on the server. Keys never ship to the browser.
           </span>
         </div>
+
+        {error ? (
+          <div
+            role="alert"
+            className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-danger/40 bg-danger/10 px-5 py-4"
+          >
+            <p className="text-danger">
+              <span className="font-bold">The plan could not be built.</span> {error}
+            </p>
+            <button type="button" className="btn btn-ghost text-sm" onClick={() => void run()}>
+              Try again
+            </button>
+          </div>
+        ) : null}
+        {note ? (
+          <p className="mt-6 text-fog" role="status">
+            {note}
+          </p>
+        ) : null}
+        {rows ? (
+          <div className="mt-8 max-w-2xl">
+            <PipelineProgress rows={rows} clockBase={clockBase} active={busy} totalMs={totalMs} />
+          </div>
+        ) : null}
       </form>
 
       <StoryScene className="story-chapter mx-auto max-w-5xl">
         <p className="story-bit kicker">Agent steps</p>
         <h2 className="story-bit display mt-4 text-5xl sm:text-7xl">Eight beats. Under 15s.</h2>
         <ol className="mt-16 space-y-8">
-          {STEPS.map((label, i) => {
-            const on = busy && i <= step;
-            return (
-              <li key={label} className="story-bit flex gap-5 text-2xl">
-                <span
-                  className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-base font-bold ${
-                    on ? "bg-sand text-[#2a1608]" : "border border-white/20 text-fog"
-                  }`}
-                >
-                  {i + 1}
-                </span>
-                <span className={on ? "text-paper" : "text-fog"}>{label}</span>
-              </li>
-            );
-          })}
+          {STEPS.map((label, i) => (
+            <li key={label} className="story-bit flex gap-5 text-2xl">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-rule text-base font-bold text-fog">
+                {i + 1}
+              </span>
+              <span className="text-fog">{label}</span>
+            </li>
+          ))}
         </ol>
       </StoryScene>
     </div>

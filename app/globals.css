@@ -14,6 +14,7 @@
   --paper: #f7f1e8;
   --danger: #ff7a9a;
   --glass: rgba(255, 255, 255, 0.07);
+  --rule: rgba(255, 255, 255, 0.16);
 }
 
 @theme inline {
@@ -33,6 +34,7 @@
   --color-paper: var(--paper);
   --color-danger: var(--danger);
   --color-glass: var(--glass);
+  --color-rule: var(--rule);
 }
 
 html,

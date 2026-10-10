@@ -95,7 +95,7 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 
 Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.
 
-LLM calls happen **only** inside the server agent (`runAgent`). The browser never sees the key. There is no REST API wrapper around Meta, Google, or the agent.
+LLM calls happen **only** inside the server agent (`runAgent`). The browser never sees the key. There is no REST API wrapper around Meta or Google. The form calls one route, `POST /api/plan`, which runs the same `runAgent` as the `createPlan` Server Action and streams each pipeline step as NDJSON so the UI can show real progress (it falls back to the Server Action if the stream is unavailable).
 
 Deploy:
 
