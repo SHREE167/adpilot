@@ -2,6 +2,7 @@ import "server-only";
 import { allocateBudget } from "./allocate";
 import { templateCreative } from "./copy-templates";
 import { runEnrichment } from "./enrich/signal";
+import { buildReadiness } from "./enrich/site-readiness";
 import {
   ESTIMATE_DISCLAIMER,
   type EnrichmentBundle,
@@ -50,7 +51,13 @@ export async function runAgent(input: PlanInput): Promise<PlanResult> {
   // Step 3: every source is optional, time-boxed and never throws.
   const enrichment: EnrichmentBundle = await trace.span(
     "enrich",
-    () => runEnrichment({}, (key, signal) => trace.signal(key, signal, "enrich")),
+    () =>
+      runEnrichment(
+        {
+          siteReadiness: () => buildReadiness(site, input),
+        },
+        (key, signal) => trace.signal(key, signal, "enrich")
+      ),
     { meta: (b) => ({ sources: Object.keys(b).length }) }
   );
 

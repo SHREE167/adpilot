@@ -6,6 +6,7 @@ import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
 import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { CountUp, StoryScene } from "@/components/Motion";
+import { ReadinessCard } from "@/components/ReadinessCard";
 import { CHANNEL_COLORS } from "@/lib/colors";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
@@ -79,9 +80,11 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
+  const readiness = plan.enrichment?.siteReadiness;
   const chapterIds = [
     "cover",
     plan.product ? "read" : null,
+    readiness ? "ready" : null,
     "numbers",
     "mix",
     (plan.placements || []).length ? "post" : null,
@@ -182,6 +185,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
               <li key={e}>↳ {e}</li>
             ))}
           </ul>
+        </StoryScene>
+      ) : null}
+
+      {readiness ? (
+        <StoryScene id="ready" className="story-chapter">
+          <Chapter {...chapter("ready")} title="Before the first rupee" />
+          <ReadinessCard signal={readiness} domain={plan.site?.domain || plan.input.domain} />
         </StoryScene>
       ) : null}
 

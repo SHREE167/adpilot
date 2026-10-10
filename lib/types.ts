@@ -69,6 +69,23 @@ export interface SiteSnapshot {
   textExcerpt?: string | null;
   scraped: boolean;
   scrapeError?: string;
+  /** v2: when the page was fetched, and whether it came from a mock fixture. */
+  fetchedAt?: string;
+  mock?: boolean;
+  /** v2 (F1 part A): tracking + funnel detection from the fetched HTML. */
+  tracking?: TrackingSignals;
+}
+
+export interface TrackingSignals {
+  https: boolean;
+  viewport: boolean;
+  metaPixel: boolean;
+  ga4: boolean;
+  gtmIds: string[];
+  whatsapp: boolean;
+  tel: boolean;
+  cta: boolean;
+  ogImage: boolean;
 }
 
 export interface ProductIntel {
@@ -214,8 +231,37 @@ export interface Signal<T> {
   reason?: string;
 }
 
+export type ReadinessCheckId =
+  | "https"
+  | "viewport"
+  | "meta_pixel"
+  | "ga4"
+  | "gtm"
+  | "whatsapp"
+  | "tel"
+  | "cta"
+  | "og_image";
+
+export interface ReadinessCheck {
+  id: ReadinessCheckId;
+  label: string;
+  state: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+/** F1: "Ready to spend?" The score is a heuristic (ESTIMATE); the checks are LIVE. */
+export interface SiteReadiness {
+  score: number;
+  checks: ReadinessCheck[];
+  /** Highest priority first. */
+  fixes: string[];
+  /** Tiny budget + weak site: send clicks to WhatsApp/DM instead of the site. */
+  funnelHint?: "whatsapp_dm";
+}
+
 /** Every optional data source result attached to a plan (brief section 3). */
 export interface EnrichmentBundle {
+  siteReadiness: Signal<SiteReadiness>;
   /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
   pageSpeed?: Signal<unknown>;
   localMarket?: Signal<unknown>;
