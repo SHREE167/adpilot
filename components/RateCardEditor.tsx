@@ -79,11 +79,11 @@ export function RateCardEditor({
           </thead>
           <tbody>
             {card.channels.map((ch, i) => (
-              <tr key={ch.id} className="border-t border-line/80">
+              <tr key={ch.id} className="border-t border-rule">
                 <td className="py-2 pr-3">{ch.name}</td>
                 <td className="py-2 pr-3">
                   <input
-                    className="num w-24 rounded-md border border-line bg-ink px-2 py-1"
+                    className="num w-24 rounded-md border border-rule-strong bg-surface px-2 py-1"
                     type="number"
                     min={1}
                     value={ch.cpm}
@@ -92,7 +92,7 @@ export function RateCardEditor({
                 </td>
                 <td className="py-2 pr-3">
                   <input
-                    className="num w-24 rounded-md border border-line bg-ink px-2 py-1"
+                    className="num w-24 rounded-md border border-rule-strong bg-surface px-2 py-1"
                     type="number"
                     min={0.1}
                     step={0.1}
@@ -102,7 +102,7 @@ export function RateCardEditor({
                 </td>
                 <td className="py-2 pr-3">
                   <input
-                    className="num w-24 rounded-md border border-line bg-ink px-2 py-1"
+                    className="num w-24 rounded-md border border-rule-strong bg-surface px-2 py-1"
                     type="number"
                     min={0.0001}
                     max={0.99}

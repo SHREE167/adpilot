@@ -41,7 +41,7 @@ export function ZeroRupeeCard({
                     ))}
                   </p>
                 ) : null}
-                <ul className="mt-5 space-y-2 border-t border-white/10 pt-4 text-sm">
+                <ul className="mt-5 space-y-2 border-t border-rule pt-4 text-sm">
                   {item.steps.map((s) => (
                     <li key={s} className="grid grid-cols-[1rem_1fr] gap-2 text-paper">
                       <span aria-hidden className="text-mint">

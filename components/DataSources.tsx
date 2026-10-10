@@ -4,7 +4,7 @@ import type { PlanResult, Signal } from "@/lib/types";
 
 const STATUS_TONE: Record<Signal<unknown>["status"], string> = {
   ok: "text-mint",
-  skipped: "text-fog/70",
+  skipped: "text-fog",
   timeout: "text-sand",
   error: "text-danger",
 };
@@ -43,7 +43,7 @@ export function DataSources({ plan }: { plan: PlanResult }) {
         </div>
 
         {signals.length ? (
-          <ul className="mt-6 divide-y divide-white/10">
+          <ul className="mt-6 divide-y divide-rule">
             {signals.map((s) => (
               <li
                 key={s.source}
@@ -67,7 +67,7 @@ export function DataSources({ plan }: { plan: PlanResult }) {
         )}
 
         {spans.length ? (
-          <details className="group mt-6 border-t border-white/10 pt-4">
+          <details className="group mt-6 border-t border-rule pt-4">
             <summary className="cursor-pointer text-sm text-sand outline-none focus-visible:underline">
               How this plan was made
             </summary>

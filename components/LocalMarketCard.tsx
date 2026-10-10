@@ -101,7 +101,7 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
           <h3 className="flex flex-wrap items-center gap-3 text-xl">
             Best rated nearby <ProvenanceBadge signal={signal} />
           </h3>
-          <ol className="mt-4 divide-y divide-white/10">
+          <ol className="mt-4 divide-y divide-rule">
             {m.top.map((p, i) => (
               <li key={`${p.name}-${i}`} className="grid grid-cols-[2rem_1fr_auto] items-baseline gap-3 py-3">
                 <span className="num text-sand">{i + 1}</span>

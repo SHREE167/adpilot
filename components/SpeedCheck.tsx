@@ -164,7 +164,7 @@ export function SpeedRow({
 
   if (!body) return null;
   return (
-    <div className="mt-6 border-t border-white/10 pt-6" aria-live="polite">
+    <div className="mt-6 border-t border-rule pt-6" aria-live="polite">
       {body}
     </div>
   );

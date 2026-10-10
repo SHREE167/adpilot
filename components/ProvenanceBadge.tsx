@@ -23,7 +23,7 @@ export function ProvenanceBadge({
   if (kind === "off") {
     return (
       <span
-        className={`${PILL} border-white/15 bg-white/[0.03] text-fog/70 ${className}`}
+        className={`${PILL} border-rule bg-tint text-fog ${className}`}
         title={signal?.reason || "Source not connected"}
       >
         Not connected

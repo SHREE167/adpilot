@@ -3,31 +3,6 @@
 import { animate, createTimeline, stagger } from "animejs";
 import { useEffect, useRef } from "react";
 
-export function FloatingOrbs() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const nodes = ref.current?.querySelectorAll(".orb");
-    if (!nodes?.length) return;
-    animate(nodes, {
-      translateY: [-80, 70],
-      translateX: [-40, 50],
-      scale: [0.85, 1.15],
-      duration: 7000,
-      delay: stagger(400),
-      ease: "inOutSine",
-      loop: true,
-      alternate: true,
-    });
-  }, []);
-  return (
-    <div ref={ref} className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="orb orb-a" />
-      <div className="orb orb-b" />
-      <div className="orb orb-c" />
-    </div>
-  );
-}
-
 function reducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&

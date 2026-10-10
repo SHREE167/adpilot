@@ -11,8 +11,9 @@ import { PlanHealth } from "@/components/PlanHealth";
 import { ReadinessCard } from "@/components/ReadinessCard";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
+import { useTheme } from "@/components/ThemeToggle";
 import { ZeroRupeeCard } from "@/components/ZeroRupeeCard";
-import { CHANNEL_COLORS } from "@/lib/colors";
+import { channelColors } from "@/lib/theme";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
 import type { PlacementPick, PlanResult, Signal } from "@/lib/types";
@@ -87,6 +88,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
 
   const readiness = plan.enrichment?.siteReadiness;
   const speed = usePageSpeed(plan);
+  const swatch = channelColors(useTheme());
   const calendar = plan.enrichment?.calendar;
   const localMarket = plan.enrichment?.localMarket;
   const showLocal = showLocalMarket(localMarket);
@@ -243,7 +245,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         <h2 className="story-bit display mb-16 text-5xl sm:text-7xl">What ₹ buys.</h2>
         <div className="grid gap-16">
           {kpis.map((k) => (
-            <div key={k.label} className="story-bit border-t border-white/10 pt-8">
+            <div key={k.label} className="story-bit border-t border-rule pt-8">
               <p className="text-sm uppercase tracking-[0.22em] text-sand">
                 {k.label} <EstimateBadge className="ml-2" />
               </p>
@@ -271,7 +273,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             <p className="story-bit inline-flex items-center gap-3 text-xl">
               <span
                 className="h-4 w-4 rounded-full"
-                style={{ background: CHANNEL_COLORS[row.channelId] }}
+                style={{ background: swatch[row.channelId] }}
               />
               {row.name}
             </p>
@@ -335,7 +337,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         <h2 className="story-bit display mb-12 text-5xl sm:text-7xl">Not these.</h2>
         <ul className="space-y-12">
           {plan.rejected.map((r) => (
-            <li key={r.channelId} className="story-bit border-t border-white/10 pt-8">
+            <li key={r.channelId} className="story-bit border-t border-rule pt-8">
               <p className="display text-4xl sm:text-5xl">
                 {r.name}{" "}
                 <span className="num text-2xl text-fog">({r.score})</span>
@@ -360,7 +362,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
               {a.primaryText}
             </p>
             <p className="story-bit mt-10">
-              <span className="rounded-full bg-sand px-6 py-3 text-lg font-bold text-[#2a1608]">
+              <span className="rounded-full bg-sand px-6 py-3 text-lg font-bold text-on-sand">
                 {a.cta}
               </span>
             </p>

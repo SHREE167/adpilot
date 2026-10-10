@@ -74,12 +74,12 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
           return (
             <li
               key={i}
-              className={`rounded-2xl border p-4 ${hot ? "border-sand/60 bg-sand/10" : "border-white/10 bg-white/[0.03]"}`}
+              className={`rounded-2xl border p-4 ${hot ? "border-sand/60 bg-sand/10" : "border-rule bg-tint"}`}
             >
               <p className="text-sm text-fog">
                 Week {i + 1} · {dayLabel(shiftIso(w.windowStart, i * 7))}
               </p>
-              <p className={`num display mt-2 text-3xl ${hot ? "text-sand" : "text-fog/70"}`}>
+              <p className={`num display mt-2 text-3xl ${hot ? "text-sand" : "text-fog"}`}>
                 {hot ? uplift(m) : "normal"}
               </p>
               <p className="mt-1 min-h-[1.25rem] text-sm text-paper">{w.weekFestivals[i] || ""}</p>
@@ -91,7 +91,7 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
       {w.upcoming.length ? (
         <div className="story-bit mt-12 max-w-3xl">
           <h3 className="text-xl">Coming up after this plan</h3>
-          <ul className="mt-4 divide-y divide-white/10">
+          <ul className="mt-4 divide-y divide-rule">
             {w.upcoming.slice(0, 4).map((f) => (
               <li key={`${f.name}-${f.date}`} className="grid grid-cols-[5.5rem_1fr] gap-3 py-3">
                 <span className="num text-sand">{dayLabel(f.date)}</span>
