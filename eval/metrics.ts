@@ -1,4 +1,6 @@
 // F16 eval metrics. Pure functions over PlanResult; no I/O, no network.
+import { groundingSet } from "@/lib/grounding-guard";
+import { kitEvidence, kitTexts } from "@/lib/launch-kit";
 import type { PlanResult } from "@/lib/types";
 
 /** 1 - |A ∩ B| / |A ∪ B|. Two empty sets are identical (0). */
@@ -118,4 +120,51 @@ export function categoryAccuracy(
 
 export function pctOf(n: number, d: number): number {
   return d ? Math.round((n / d) * 1000) / 10 : 0;
+}
+
+/** Word n-gram set of a text (lowercased, letters/digits only). */
+export function shingles(text: string, n = 3): Set<string> {
+  const w = text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const out = new Set<string>();
+  for (let i = 0; i + n <= w.length; i++) out.add(w.slice(i, i + n).join(" "));
+  return out;
+}
+
+/** Mean pairwise Jaccard SIMILARITY of shingle sets (0 = nothing shared, 1 = identical). Lower = more specific. */
+export function meanPairwiseSimilarity(texts: readonly string[], n = 3): number {
+  const sets = texts.map((t) => [...shingles(t, n)]);
+  return sets.length > 1 ? 1 - meanPairwiseJaccard(sets) : 0;
+}
+
+/** Everything a plan's generated text may cite: structured plan data + signals (no free text). */
+export function planEvidence(plan: PlanResult): number[] {
+  const { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements } = plan;
+  return groundingSet(
+    { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements },
+    plan.launchKit ? kitEvidence(plan.launchKit) : null
+  );
+}
+
+export function kitText(plan: PlanResult): string {
+  return plan.launchKit ? Object.values(kitTexts(plan.launchKit)).join("\n") : "";
+}
+
+/** Generated text the guard is responsible for: the kit, plus LLM copy when an LLM wrote it. */
+export function guardedTexts(plan: PlanResult): string[] {
+  const out = plan.launchKit ? Object.values(kitTexts(plan.launchKit)) : [];
+  if (plan.llmUsed) {
+    out.push(...plan.mix.map((m) => m.explanation));
+    for (const a of plan.adAngles) out.push(a.headline, a.primaryText, a.cta);
+    for (const o of plan.outreach) out.push(o.title, o.body);
+  }
+  return out;
+}
+
+/** v1 template ad angles + outreach + explanations (not LLM, not guarded): illustrative offers. */
+export function templateCopyTexts(plan: PlanResult): string[] {
+  if (plan.llmUsed) return [];
+  const out = plan.mix.map((m) => m.explanation);
+  for (const a of plan.adAngles) out.push(a.headline, a.primaryText, a.cta);
+  for (const o of plan.outreach) out.push(o.title, o.body);
+  return out;
 }

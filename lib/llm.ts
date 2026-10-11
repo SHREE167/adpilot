@@ -1,5 +1,6 @@
 import "server-only";
 import type { CreativeFill } from "./copy-templates";
+import { isMockMode, readFixture } from "./enrich/mock";
 import type {
   ChannelAllocation,
   PlanInput,
@@ -24,7 +25,8 @@ function firstKey(): { provider: string; key: string; url: string; model: string
       provider: "groq",
       key: groq,
       url: "https://api.groq.com/openai/v1/chat/completions",
-      model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+      // Llama models moved to Groq's Enterprise tier (404 on free keys, Oct 2026).
+      model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
     };
   }
   const openai = process.env.OPENAI_API_KEY;
@@ -196,7 +198,8 @@ async function openAiCompat(
   key: string,
   model: string,
   prompt: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxTokens = 1800
 ): Promise<string> {
   const res = await fetch(url, {
     method: "POST",
@@ -208,7 +211,9 @@ async function openAiCompat(
     body: JSON.stringify({
       model,
       temperature: 0.6,
-      max_tokens: 1800,
+      max_tokens: maxTokens,
+      // gpt-oss models reason first; keep that short so the JSON fits the budget.
+      ...(/gpt-oss/.test(model) ? { reasoning_effort: "low" } : {}),
       messages: [
         {
           role: "system",
@@ -342,4 +347,105 @@ export function mergeCreative(
   const adAngles = (llm?.adAngles?.length ? [...llm.adAngles, ...base.adAngles] : base.adAngles).slice(0, 3);
   const outreach = (llm?.outreach?.length ? [...llm.outreach, ...base.outreach] : base.outreach).slice(0, 8);
   return { mix: nextMix, adAngles, outreach };
+}
+
+/** F7: fixture source for the launch-kit rewrite in mock mode (recorded from one real call). */
+export const KIT_LLM_SOURCE = "llm_launch_kit";
+const KIT_MAX_TOKENS = 6000;
+
+const SCRIPT_NAME: Record<string, string> = {
+  tamil: "Tamil",
+  hindi: "Devanagari",
+  marathi: "Devanagari",
+  telugu: "Telugu",
+  kannada: "Kannada",
+  malayalam: "Malayalam",
+  bengali: "Bengali",
+};
+
+export interface KitRewrite {
+  used: boolean;
+  provider: string | null;
+  texts: Record<string, string> | null;
+  /** True when the words came from a recorded fixture (ADPILOT_MOCK_APIS=1). */
+  mock?: boolean;
+}
+
+/** Prompt for the tone-only rewrite. Numbers are frozen; the guard enforces it afterwards. */
+export function kitRewritePrompt(texts: Record<string, string>, input: PlanInput, tone: string): string {
+  const lang = input.language.trim() || "English";
+  const english = /^english$/i.test(lang);
+  const script = SCRIPT_NAME[lang.toLowerCase()];
+  return `Rewrite these launch-kit lines for the owner of "${input.product_name}" in ${input.city}.
+${english ? "Write in plain Indian English" : `Translate every line into ${lang}${script ? ` written in ${script} script` : ""}, the way a local shop owner talks (English words like Reels, WhatsApp, CTR, CPM may stay in English)`}. Tone: ${tone}; short and direct.
+Do not return a line unchanged: ${english ? "make each one sound like a person talking" : `every line must be in ${lang}`}.
+Rules:
+- keep each line's meaning and instructions
+- keep every number exactly as written (prices, ages, times, counts, dates)
+- do NOT add any new number, price, percentage, date, time or claim
+- keep brand names, channel names, place names and quoted search terms as written
+Return JSON only: {"texts": {"<same key>": "<rewritten line>"}} with every key below.
+Lines:
+${JSON.stringify(texts)}`;
+}
+
+function asTexts(data: unknown, keys: string[]): Record<string, string> | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  const src = (obj.texts && typeof obj.texts === "object" ? obj.texts : obj) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const k of keys) {
+    const v = src[k];
+    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 400);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Live LLM call (Groq first). Exported for the fixture recorder. Throws on failure. */
+export async function callKitRewrite(
+  prompt: string,
+  signal: AbortSignal
+): Promise<{ provider: string; model: string; content: string } | null> {
+  const cfg = firstKey();
+  if (!cfg) return null;
+  const content =
+    cfg.provider === "google"
+      ? await googleGenerate(cfg.url, cfg.key, prompt, signal)
+      : await openAiCompat(cfg.url, cfg.key, cfg.model, prompt, signal, KIT_MAX_TOKENS);
+  return { provider: cfg.provider, model: cfg.model, content };
+}
+
+/**
+ * F7: rewords the deterministic kit for tone + language. Mock mode replays a
+ * recorded response for this product (or keeps the template). Never throws.
+ */
+export async function rewriteLaunchKit(
+  texts: Record<string, string>,
+  input: PlanInput,
+  tone: string
+): Promise<KitRewrite> {
+  const keys = Object.keys(texts);
+  if (isMockMode()) {
+    const fx = await readFixture<{ provider: string; content: string }>(KIT_LLM_SOURCE, input.product_name);
+    if (!fx) return { used: false, provider: null, texts: null };
+    try {
+      const out = asTexts(extractJson(fx.data.content), keys);
+      return { used: Boolean(out), provider: fx.data.provider, texts: out, mock: true };
+    } catch {
+      return { used: false, provider: fx.data.provider, texts: null, mock: true };
+    }
+  }
+  if (!firstKey()) return { used: false, provider: null, texts: null };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+  try {
+    const res = await callKitRewrite(kitRewritePrompt(texts, input, tone), controller.signal);
+    if (!res) return { used: false, provider: null, texts: null };
+    const out = asTexts(extractJson(res.content), keys);
+    return { used: Boolean(out), provider: res.provider, texts: out };
+  } catch {
+    return { used: false, provider: firstKey()?.provider ?? null, texts: null };
+  } finally {
+    clearTimeout(timer);
+  }
 }

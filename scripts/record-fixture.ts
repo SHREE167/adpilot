@@ -15,6 +15,9 @@ import {
   type YtSearchResponse,
 } from "@/lib/enrich/youtube-creators";
 import { fetchMetaRaw, interestSeeds, META_ENV, META_SOURCE, toAudienceEstimate } from "@/lib/enrich/meta-reach";
+import { runAgent } from "@/lib/agent";
+import { kitTexts } from "@/lib/launch-kit";
+import { callKitRewrite, KIT_LLM_SOURCE, kitRewritePrompt } from "@/lib/llm";
 import golden from "../eval/golden-briefs.json";
 import type { PlanInput } from "@/lib/types";
 
@@ -126,7 +129,37 @@ async function meta(): Promise<void> {
   write(`fixtures/api/${META_SOURCE}/default.json`, { fetchedAt, data });
 }
 
-const SOURCES: Record<string, () => Promise<void>> = { youtube, meta };
+/** One real LLM call: the demo brief's launch kit reworded for tone (Groq first). */
+async function groq(): Promise<void> {
+  if (!need("GROQ_API_KEY")) return;
+  // Build the demo plan offline (mock signals, no LLM), then make exactly one live call.
+  const saved: Record<string, string | undefined> = {};
+  for (const k of LLM_KEYS) {
+    saved[k] = process.env[k];
+    delete process.env[k];
+  }
+  process.env.ADPILOT_MOCK_APIS = "1";
+  const plan = await runAgent(DEMO.input);
+  process.env.ADPILOT_MOCK_APIS = "";
+  for (const k of LLM_KEYS) if (saved[k]) process.env[k] = saved[k];
+  const texts = kitTexts(plan.launchKit!);
+  console.log(`Groq: rewrite ${Object.keys(texts).length} launch-kit lines in ${DEMO.input.language} (1 chat completion)`);
+  const res = await callKitRewrite(kitRewritePrompt(texts, DEMO.input, plan.product.tone), AbortSignal.timeout(20000));
+  if (!res || res.provider !== "groq") {
+    console.error("  no Groq response");
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`  HTTP 200, model ${res.model}, ${res.content.length} chars`);
+  write(`fixtures/api/${KIT_LLM_SOURCE}/${slug(DEMO.input.product_name)}.json`, {
+    fetchedAt: new Date().toISOString(),
+    data: { provider: res.provider, model: res.model, prompt: "kitRewritePrompt (lib/llm.ts)", content: res.content },
+  });
+}
+
+const LLM_KEYS = ["GROQ_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
+
+const SOURCES: Record<string, () => Promise<void>> = { youtube, meta, groq };
 
 const which = process.argv[2];
 if (!which || !SOURCES[which]) {

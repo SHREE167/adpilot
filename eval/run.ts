@@ -19,7 +19,13 @@ import {
   mixSumsToBudget,
   pctOf,
   percentile,
+  planEvidence,
+  guardedTexts,
+  kitText,
+  meanPairwiseSimilarity,
+  templateCopyTexts,
 } from "./metrics";
+import { groundingRate } from "@/lib/grounding-guard";
 
 interface Brief {
   id: string;
@@ -69,6 +75,12 @@ interface Scores {
   p50: number;
   p95: number;
   mixSumOk: number;
+  /** v2: launch-kit text similarity; v1: template copy similarity (no kit). */
+  textSimilarity: number;
+  hasKit: boolean;
+  grounding: { grounded: number; total: number };
+  guard: { checked: number; removed: number };
+  templateCopy: { grounded: number; total: number };
 }
 
 function score(runs: Run[], variant: Variant): Scores {
@@ -129,7 +141,33 @@ function score(runs: Run[], variant: Variant): Scores {
     p50: percentile(ms, 50),
     p95: percentile(ms, 95),
     mixSumOk: runs.filter((r) => mixSumsToBudget(r.plan)).length,
+    ...textScores(runs),
   };
+}
+
+function textScores(runs: Run[]): Pick<Scores, "textSimilarity" | "hasKit" | "grounding" | "guard" | "templateCopy"> {
+  const hasKit = runs.some((r) => r.plan.launchKit);
+  const texts = runs.map((r) =>
+    hasKit
+      ? kitText(r.plan)
+      : [...r.plan.adAngles.map((a) => `${a.headline} ${a.primaryText}`), ...r.plan.outreach.map((o) => o.body)].join("\n")
+  );
+  const grounding = { grounded: 0, total: 0 };
+  const templateCopy = { grounded: 0, total: 0 };
+  const guard = { checked: 0, removed: 0 };
+  for (const r of runs) {
+    const ev = planEvidence(r.plan);
+    const g = groundingRate(guardedTexts(r.plan), ev);
+    grounding.grounded += g.grounded;
+    grounding.total += g.total;
+    const c = groundingRate(templateCopyTexts(r.plan), ev);
+    templateCopy.grounded += c.grounded;
+    templateCopy.total += c.total;
+    const span = r.plan.trace?.spans.find((s) => s.name === "grounding_guard" && s.status === "ok");
+    guard.checked += Number(span?.meta?.checked ?? 0);
+    guard.removed += Number(span?.meta?.removed ?? 0);
+  }
+  return { textSimilarity: meanPairwiseSimilarity(texts), hasKit, grounding, guard, templateCopy };
 }
 
 function git(cmd: string): string {
@@ -182,6 +220,22 @@ async function main() {
     ["Explanation additivity (base + Σ = score)", s1.additivity, s2.additivity],
     ["Latency p50 / p95 (ms, offline mock)", `${f1(s1.p50)} / ${f1(s1.p95)}`, `${f1(s2.p50)} / ${f1(s2.p95)}`],
     ["Mix sums to budget", `${s1.mixSumOk} / ${n}`, `${s2.mixSumOk} / ${n}`],
+    [
+      "Launch-kit text similarity (3-gram Jaccard, lower = more specific)",
+      s1.hasKit ? f2(s1.textSimilarity) : `— no kit (v1 template copy: ${f2(s1.textSimilarity)})`,
+      s2.hasKit ? f2(s2.textSimilarity) : "—",
+    ],
+    [
+      "Grounding rate (numbers in kit + LLM text traceable)",
+      s1.grounding.total ? `${pctOf(s1.grounding.grounded, s1.grounding.total)}%` : "— (nothing generated)",
+      `${pctOf(s2.grounding.grounded, s2.grounding.total)}% (${s2.grounding.grounded}/${s2.grounding.total})`,
+    ],
+    ["Guard: LLM numbers checked / removed", "— (no guard)", `${s2.guard.checked} / ${s2.guard.removed}`],
+    [
+      "v1 template scripts: numbers traceable (not guarded)",
+      `${pctOf(s1.templateCopy.grounded, s1.templateCopy.total)}% (${s1.templateCopy.grounded}/${s1.templateCopy.total})`,
+      `${pctOf(s2.templateCopy.grounded, s2.templateCopy.total)}% (${s2.templateCopy.grounded}/${s2.templateCopy.total})`,
+    ],
   ];
 
   const table = [
@@ -202,7 +256,7 @@ async function main() {
     }),
   ].join("\n");
 
-  const report = `# AdPilot eval report (F16 v0)
+  const report = `# AdPilot eval report (F16, M4)
 
 - **Date:** ${now.toISOString().slice(0, 10)} (${now.toISOString()})
 - **Git:** \`${hash}\`${dirty}
@@ -221,11 +275,15 @@ ${perBrief}
 
 - **v1** is \`runAgent(input, { baseline: true })\`: no enrichment step, no season adjust, no zero-rupee layer, no reality check. Its mix is the v1 mix.
 - **Category accuracy** compares the recognized category (heuristic only here; no LLM in eval) with each brief's hand-labelled \`expectedCategory\`: what the business sells, not who buys it. The labels were written alongside the M4 recognizer fix, so 100% here is a regression floor, not proof of generalisation.
-- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts and YouTube creators (each only when the query names the brief's city),zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
+- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts, YouTube creators and the Meta audience pool + interests (each only when the query names the brief's city; the Meta fixture is hand-written until \`npm run record -- meta\` replaces it), zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
 - **Diversity** is the mean pairwise Jaccard distance between the channel sets of all briefs (0 = every plan picks the same channels, 1 = no overlap).
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is \`runAgent\` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
-- M3 does not change which channels are picked (only festival pricing touches allocation), so v1 and v2 diversity are expected to match. The live audience caps (F4), critic (F12) and explore slice (F20) are what move diversity later.
+- Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
+- **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
+- **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from text the grounding guard is responsible for (the launch kit, plus LLM copy when an LLM wrote it) and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
+- **Guard: checked / removed** sums the \`grounding_guard\` trace span over plans whose words came from an LLM. In eval only the demo brief has one: a real Groq response recorded by \`npm run record -- groq\` and replayed offline.
+- **v1 template scripts** are v1's static ad angles and outreach examples. They contain illustrative offers ("10% off on 3+ packs") that no data supports; they are shown here, unguarded, so the gap is visible.
 `;
 
   writeFileSync(path.join(process.cwd(), "eval", "report.md"), report);
@@ -240,6 +298,9 @@ ${perBrief}
   for (const [name, s] of [["v1", s1], ["v2", s2]] as const) {
     if (s.mixSumOk !== n) failures.push(`${name}: ${n - s.mixSumOk} mix(es) do not sum to the budget`);
     if (!(s.signature > 0)) failures.push(`${name}: signature briefs produced the same mix`);
+  }
+  if (s2.grounding.total && s2.grounding.grounded < s2.grounding.total) {
+    failures.push(`v2: grounding ${pctOf(s2.grounding.grounded, s2.grounding.total)}% (must be 100%)`);
   }
   if (s2.additivityPct < 100) failures.push(`v2: TreeSHAP additivity ${s2.additivityPct}% (must be 100%)`);
   if (failures.length) {

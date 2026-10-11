@@ -117,6 +117,27 @@ export function planToMarkdown(plan: PlanResult): string {
     }
     lines.push("");
   }
+  const kit = plan.launchKit;
+  if (kit?.channels.length) {
+    lines.push(`## Launch kit (${kit.wording === "template" ? "template wording" : `worded by ${kit.wording}`})`);
+    lines.push("");
+    if (kit.guard.checked) {
+      lines.push(`Grounding guard: ${kit.guard.checked} numbers checked, ${kit.guard.removed} removed.`);
+      lines.push("");
+    }
+    for (const c of kit.channels) {
+      lines.push(`### ${c.headline}`);
+      lines.push("");
+      lines.push(`- **Who:** ${c.targeting.text}`);
+      lines.push(`- **When:** ${c.schedule.text}`);
+      lines.push(`- **Make:** ${c.creatives.text}`);
+      if (c.keywords.length) lines.push(`- **Keywords:** ${c.keywords.join(", ")}`);
+      lines.push(`- **Watch:** ${c.metric.name}. ${c.metric.why}`);
+      lines.push("- **First week:**");
+      for (const t of c.checklist) lines.push(`  - [ ] ${t}`);
+      lines.push("");
+    }
+  }
   lines.push("## Rejected / unused channels");
   lines.push("");
   for (const r of plan.rejected) {

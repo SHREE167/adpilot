@@ -8,6 +8,7 @@ import { EstimateBadge } from "@/components/EstimateBadge";
 import { AudienceCard } from "@/components/AudienceCard";
 import { CreatorsCard } from "@/components/CreatorsCard";
 import { CountUp, StoryScene } from "@/components/Motion";
+import { LaunchKit } from "@/components/LaunchKit";
 import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { PlanHealth } from "@/components/PlanHealth";
 import { ReadinessCard } from "@/components/ReadinessCard";
@@ -115,6 +116,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
     "numbers",
     "mix",
     (plan.placements || []).length ? "post" : null,
+    plan.launchKit?.channels.length ? "kit" : null,
     "charts",
     "cuts",
     "ads",
@@ -346,6 +348,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             <PlacementScene key={`${p.channelId}-${p.target}`} p={p} />
           ))}
         </div>
+      ) : null}
+
+      {plan.launchKit?.channels.length ? (
+        <StoryScene id="kit" className="story-chapter">
+          <Chapter {...chapter("kit")} title="Launch kit" />
+          <LaunchKit kit={plan.launchKit} enrichment={plan.enrichment} />
+        </StoryScene>
       ) : null}
 
       <StoryScene id="charts" className="story-chapter">

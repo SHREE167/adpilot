@@ -1,7 +1,7 @@
-# AdPilot eval report (F16 v0)
+# AdPilot eval report (F16, M4)
 
-- **Date:** 2026-10-11 (2026-10-11T05:35:18.891Z)
-- **Git:** `887b057` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T06:07:43.652Z)
+- **Git:** `d756357` (uncommitted changes)
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
 
@@ -17,8 +17,12 @@
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 9.8 / 26.6 | 21.0 / 27.0 |
+| Latency p50 / p95 (ms, offline mock) | 8.5 / 25.7 | 20.8 / 26.1 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
+| Launch-kit text similarity (3-gram Jaccard, lower = more specific) | — no kit (v1 template copy: 0.19) | 0.21 |
+| Grounding rate (numbers in kit + LLM text traceable) | — (nothing generated) | 100% (1717/1717) |
+| Guard: LLM numbers checked / removed | — (no guard) | 102 / 0 |
+| v1 template scripts: numbers traceable (not guarded) | 74% (168/227) | 95.2% (216/227) |
 
 ## Per brief (v2)
 
@@ -49,8 +53,12 @@
 
 - **v1** is `runAgent(input, { baseline: true })`: no enrichment step, no season adjust, no zero-rupee layer, no reality check. Its mix is the v1 mix.
 - **Category accuracy** compares the recognized category (heuristic only here; no LLM in eval) with each brief's hand-labelled `expectedCategory`: what the business sells, not who buys it. The labels were written alongside the M4 recognizer fix, so 100% here is a regression floor, not proof of generalisation.
-- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts and YouTube creators (each only when the query names the brief's city),zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
+- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts, YouTube creators and the Meta audience pool + interests (each only when the query names the brief's city; the Meta fixture is hand-written until `npm run record -- meta` replaces it), zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
 - **Diversity** is the mean pairwise Jaccard distance between the channel sets of all briefs (0 = every plan picks the same channels, 1 = no overlap).
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is `runAgent` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
-- M3 does not change which channels are picked (only festival pricing touches allocation), so v1 and v2 diversity are expected to match. The live audience caps (F4), critic (F12) and explore slice (F20) are what move diversity later.
+- Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
+- **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
+- **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from text the grounding guard is responsible for (the launch kit, plus LLM copy when an LLM wrote it) and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
+- **Guard: checked / removed** sums the `grounding_guard` trace span over plans whose words came from an LLM. In eval only the demo brief has one: a real Groq response recorded by `npm run record -- groq` and replayed offline.
+- **v1 template scripts** are v1's static ad angles and outreach examples. They contain illustrative offers ("10% off on 3+ packs") that no data supports; they are shown here, unguarded, so the gap is visible.

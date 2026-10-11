@@ -223,6 +223,8 @@ export interface PlanResult {
   realityCheck?: RealityCheck;
   /** F9: exact TreeSHAP per channel; absent on plans made before M3. */
   shap?: PlanShap;
+  /** F7: per-channel launch kit; absent on plans made before M4. */
+  launchKit?: LaunchKit;
   trace?: PlanTrace;
 }
 
@@ -479,6 +481,58 @@ export interface ZeroRupeeItem {
   steps: string[];
   /** Signal sources quoted in `why` (badged in the UI); empty = from the brief only. */
   sources: string[];
+}
+
+/**
+ * F7: one channel's launch instructions. Every number lives in a structured
+ * field; text fields are rendered from them (and may be reworded by an LLM,
+ * after which the grounding guard removes any number it cannot trace).
+ */
+export interface KitChannel {
+  channelId: ChannelId;
+  name: string;
+  budget: number;
+  percent: number;
+  /** One line, e.g. "Instagram Reels · ₹1,800 · Chennai 18-24 · 3 Reels Fri-Sun 6-10pm". */
+  headline: string;
+  targeting: {
+    text: string;
+    /** Exact Meta targeting spec, for Facebook/Instagram when the audience signal is ok. */
+    spec?: MetaTargetingSpec;
+  };
+  schedule: {
+    /** Short day names, e.g. ["Fri", "Sat", "Sun"]. */
+    days: string[];
+    /** 24h clock, start inclusive, end exclusive. */
+    startHour: number;
+    endHour: number;
+    /** Plan weeks to push harder (festival weeks); empty = even. */
+    pushWeeks: number[];
+    text: string;
+  };
+  creatives: {
+    count: number;
+    format: string;
+    /** Aspect ratio [w, h] and length range in seconds, when the format has them. */
+    aspect?: [number, number];
+    seconds?: [number, number];
+    text: string;
+  };
+  /** Search keywords (Google Search) or targeting interests/topics (others). */
+  keywords: string[];
+  checklist: string[];
+  metric: { name: string; why: string };
+  /** Signal sources this channel's kit used (badged in the UI). */
+  sources: string[];
+}
+
+export interface LaunchKit {
+  language: string;
+  channels: KitChannel[];
+  /** Who wrote the words: "template" or the LLM provider ("groq", ...). */
+  wording: string;
+  /** Grounding guard over every generated text in the plan (kit + LLM copy). */
+  guard: { checked: number; removed: number; samples: string[] };
 }
 
 /** Every optional data source result attached to a plan (brief section 3). */

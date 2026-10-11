@@ -10,7 +10,9 @@ import { buildReadiness } from "./enrich/site-readiness";
 import { buildRealityCheck, hasRealityInputs } from "./reality-check";
 import {
   ESTIMATE_DISCLAIMER,
+  type ChannelAllocation,
   type EnrichmentBundle,
+  type LaunchKit,
   type PlanInput,
   type PlanResult,
   type PlanShap,
@@ -20,7 +22,9 @@ import {
 } from "./types";
 import { newPlanId } from "./format";
 import { capMetaReach, rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
-import { fillWithLlm, mergeCreative, recognizeWithLlm } from "./llm";
+import { fillWithLlm, mergeCreative, recognizeWithLlm, rewriteLaunchKit, type KitRewrite } from "./llm";
+import { groundingSet, guardText } from "./grounding-guard";
+import { buildLaunchKit, guardKitTexts, kitEvidence, kitTexts } from "./launch-kit";
 import { mergeIntel, recognizeHeuristic } from "./recognize";
 import { getRateCard } from "./storage";
 import { lookupPlacements } from "./placements";
@@ -185,10 +189,43 @@ export async function runAgent(
   let llmProvider: string | null = null;
   let creative = mergeCreative(mix, templates, null);
 
+  const rejected = scores
+    .filter((s) => s.rejected || !mix.some((m) => m.channelId === s.channelId))
+    .sort((a, b) => b.score - a.score);
+  // Placements only read channel ids/names, so they run before copy and feed the kit's keywords.
+  const placements = await trace.span(
+    "placements",
+    () => lookupPlacements(mix, input, product),
+    { meta: (p) => ({ picks: p.length }) }
+  );
+
+  // Step 10 (F7): deterministic launch kit from the mix + signals.
+  let launchKit: LaunchKit | undefined;
+  if (v2) {
+    launchKit = await trace.span(
+      "launch_kit",
+      () => buildLaunchKit({ input, category: product.category, mix, placements, enrichment }),
+      { meta: (k) => ({ channels: k.channels.length, sources: new Set(k.channels.flatMap((c) => c.sources)).size }) }
+    );
+  } else {
+    trace.skip("launch_kit", "baseline (v1)");
+  }
+
+  // Copy LLM and kit rewrite run in parallel; both are wording only.
+  let kitRewrite: KitRewrite | null = null;
   if (remaining() > 3500) {
-    const llm = await trace.span("copy_llm", () => fillWithLlm(input, mix, product, site), {
-      meta: (r) => ({ used: r.used, provider: r.provider ?? "none" }),
-    });
+    const baseKit = launchKit;
+    const [llm, rew] = await Promise.all([
+      trace.span("copy_llm", () => fillWithLlm(input, mix, product, site), {
+        meta: (r) => ({ used: r.used, provider: r.provider ?? "none" }),
+      }),
+      baseKit
+        ? trace.span("launch_kit_llm", () => rewriteLaunchKit(kitTexts(baseKit), input, product.tone), {
+            meta: (r): TraceMeta => ({ used: r.used, provider: r.provider ?? "none", ...(r.mock ? { mock: true } : {}) }),
+          })
+        : Promise.resolve(null),
+    ]);
+    kitRewrite = rew;
     llmUsed = llm.used;
     llmProvider = llm.used ? llm.provider : null;
     creative = mergeCreative(mix, templates, llm.fill);
@@ -198,16 +235,56 @@ export async function runAgent(
     }
   } else {
     trace.skip("copy_llm", "time budget");
+    if (launchKit) trace.skip("launch_kit_llm", "time budget");
   }
 
-  const rejected = scores
-    .filter((s) => s.rejected || !mix.some((m) => m.channelId === s.channelId))
-    .sort((a, b) => b.score - a.score);
-  const placements = await trace.span(
-    "placements",
-    () => lookupPlacements(creative.mix, input, product),
-    { meta: (p) => ({ picks: p.length }) }
-  );
+  // Grounding guard (F7): every number in LLM text must trace to the plan or a signal.
+  if (v2) {
+    const kitBefore = launchKit;
+    const guarded = await trace.span(
+      "grounding_guard",
+      () => {
+        const evidence = groundingSet(
+          { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements },
+          kitBefore ? kitEvidence(kitBefore) : null
+        );
+        let checked = 0;
+        const removed: string[] = [];
+        let kit = kitBefore;
+        if (kitBefore && kitRewrite?.texts) {
+          const r = guardKitTexts(kitBefore, kitRewrite.texts, evidence, guardText);
+          kit = r.kit;
+          checked += r.checked;
+          removed.push(...r.removed);
+        }
+        let copy = creative;
+        if (llmUsed) {
+          const r = guardCreative(creative, mix, templates.explanations, evidence);
+          copy = r.creative;
+          checked += r.checked;
+          removed.push(...r.removed);
+        }
+        return { kit, copy, checked, removed };
+      },
+      {
+        meta: (g): TraceMeta => ({
+          checked: g.checked,
+          removed: g.removed.length,
+          ...(g.removed.length ? { samples: g.removed.slice(0, 5).join(" | ") } : {}),
+        }),
+      }
+    );
+    creative = guarded.copy;
+    if (guarded.kit) {
+      launchKit = {
+        ...guarded.kit,
+        wording: kitRewrite?.used && kitRewrite.provider ? kitRewrite.provider + (kitRewrite.mock ? " (recorded)" : "") : "template",
+        guard: { checked: guarded.checked, removed: guarded.removed.length, samples: guarded.removed.slice(0, 5) },
+      };
+    }
+  } else {
+    trace.skip("grounding_guard", "baseline (v1)");
+  }
 
   const planTrace = trace.finish();
 
@@ -238,6 +315,41 @@ export async function runAgent(
     ...(zeroRupee ? { zeroRupee } : {}),
     ...(realityCheck ? { realityCheck } : {}),
     ...(shap ? { shap } : {}),
+    ...(launchKit ? { launchKit } : {}),
     trace: planTrace,
   };
+}
+
+/**
+ * Guard LLM ad copy: explanations with an untraceable number fall back to the
+ * template line; ad angles and outreach lose the offending number tokens.
+ */
+function guardCreative(
+  creative: { mix: ChannelAllocation[]; adAngles: PlanResult["adAngles"]; outreach: PlanResult["outreach"] },
+  mix: ChannelAllocation[],
+  templateExplanations: Record<string, string>,
+  evidence: readonly number[]
+): { creative: typeof creative; checked: number; removed: string[] } {
+  let checked = 0;
+  const removed: string[] = [];
+  const g = (text: string) => {
+    const r = guardText(text, evidence);
+    checked += r.checked;
+    removed.push(...r.removed);
+    return r;
+  };
+  const nextMix = creative.mix.map((row) => {
+    const r = g(row.explanation);
+    if (!r.removed.length) return row;
+    const fallback = templateExplanations[row.channelId] ?? mix.find((m) => m.channelId === row.channelId)?.explanation ?? r.text;
+    return { ...row, explanation: fallback };
+  });
+  const adAngles = creative.adAngles.map((a) => ({
+    ...a,
+    headline: g(a.headline).text,
+    primaryText: g(a.primaryText).text,
+    cta: g(a.cta).text,
+  }));
+  const outreach = creative.outreach.map((o) => ({ ...o, title: g(o.title).text, body: g(o.body).text }));
+  return { creative: { mix: nextMix, adAngles, outreach }, checked, removed };
 }
