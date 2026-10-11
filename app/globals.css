@@ -389,3 +389,65 @@ textarea {
   border-color: transparent;
   box-shadow: none;
 }
+
+/* F11 budget slider: native range, themed. --fill is set inline (0-100%). */
+.budget-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+.budget-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--sand) var(--fill, 50%), var(--rule-strong) var(--fill, 50%));
+}
+.budget-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule-strong);
+}
+.budget-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sand);
+}
+.budget-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 3px solid var(--sand);
+}
+.budget-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 3px solid var(--sand);
+}
+.budget-range:focus-visible {
+  outline: none;
+}
+.budget-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sand) 35%, transparent);
+}
+.budget-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sand) 35%, transparent);
+}
+
+/* Compact slider pinned to the bottom of the screen once the hero card scrolls away. */
+.slider-sticky {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 35;
+  background: color-mix(in srgb, var(--ink) 92%, transparent);
+  border-top: 1px solid var(--rule);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

@@ -50,6 +50,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/scoring.ts`, `lib/ml/infer.ts`, `lib/ml/features.ts` | XGBoost per channel (25 features, 12 channels) + policy rules. `explainScore()` returns the top TreeSHAP drivers; `assertModelSelfCheck()` also checks cover + SHAP additivity. |
 | `lib/ml/shap.ts`, `lib/ml/feature-labels.ts`, `components/ShapWaterfall.tsx` | F9: exact TreeSHAP (Lundberg 2018, Alg. 2), pure TS; human labels for the 25 features; "Why this channel?" waterfall; `PlanResult.shap`. |
 | `ml/train.py`, `ml/model.json` | Synthetic training; every node has `cover`. Python is blocked locally (Smart App Control): retrain in Colab (steps in the train.py docstring). |
+| `lib/policy.ts`, `lib/budget-grid.ts`, `lib/scenario.ts`, `components/BudgetSlider.tsx` | F11: shared budget policy (LinkedIn < ₹15k); server-only grid of raw scores at 11 budgets (0.25x-4x, SHAP only for mix channels); pure `scenarioAt` / `sliderSteps` / `transitions` re-run allocate + forecast + reality in the browser. |
 | `lib/ranges.ts` | F14: low/mid/high bands (default ±30%, Meta-pool-backed reach ±15%, `calibrated` reserved for M6); `rangesOf`/`totalsRangesOf` derive bands for pre-M5 plans. Pure, client-safe. |
 | `lib/allocate.ts`, `lib/forecast.ts` | Pure: 2–5 channels, 50% cap, sum == budget; rate-card math + weekly rollup with season multipliers. |
 | `lib/storage.ts`, `lib/rate-card.ts` | Postgres (`adpilot_plans`, `adpilot_rate_card`) or memory + localStorage. |
@@ -97,7 +98,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | M2 | F1 part B (PageSpeed, deferred), F2 Places, F10 zero-rupee | #3 PageSpeed, #4 Places | 2 days |
 | M3 | F8 reality check, F9 TreeSHAP (retrain with cover), F16 eval harness v0 (v1 baseline) | None | 3 days |
 | M4 | F4 Meta reach, F5 YouTube, F7 launch kit + grounding guard | #2 Groq, #5 YouTube, #6 Meta | 3–4 days |
-| M5 | F11 budget slider, F14 ranges (default band) | None | 2 days |
+| M5 | F11 budget slider, F14 ranges (default band) — done | None | 2 days |
 | M6 | F12 critic, F13 actuals loop, F14 calibrated intervals, F20 explore slice, (F6) | #1 Postgres, #2 Groq, (#7 SerpAPI) | 4 days |
 | M7 | F17 ad previews, F18 share/print, F15 trace page UI | None | 2 days |
 | M8 | Eval v2 vs v1 report, fixtures, tests, README, demo script, report/PPT material | — | 2 days |

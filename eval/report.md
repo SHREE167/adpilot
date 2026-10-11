@@ -1,7 +1,7 @@
 # AdPilot eval report (F16, M4)
 
-- **Date:** 2026-10-11 (2026-10-11T13:13:18.896Z)
-- **Git:** `ee735b1` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T14:11:28.816Z)
+- **Git:** `99ef4e6` (uncommitted changes)
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
 
@@ -17,8 +17,16 @@
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 9.1 / 19.9 | 20.7 / 30.1 |
+| Latency p50 / p95 (ms, offline mock) | 13.0 / 31.3 | 95.1 / 180.1 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
+| Slider: briefs with a budget grid | — (no slider) | 20 / 20 (1807 slider steps) |
+| Slider: totals = slider budget at every step | — (no slider) | 20 / 20 |
+| Slider: 1× reproduces the saved plan | — (no slider) | 20 / 20 |
+| Slider: 1-5 channels, none > 50% from ₹3,000; LinkedIn policy | — (no slider) | 20 / 20 |
+| Slider: channel count never falls as budget rises | — (no slider) | 20 / 20 |
+| Slider: impressions never fall as budget rises (reported, not gated) | — (no slider) | 12 / 20 |
+| Slider: recompute p50 / p95 (ms per move) | — (no slider) | 0.098 / 0.405 |
+| Signature ₹3k vs ₹40k mixes at 0.25× and 4× (Jaccard) | — (no slider) | 1.00 at 0.25× / 1.00 at 4× |
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reach bands backed by a signal (Meta pool) / high within pool | 0 / 20 of 20 | 32 / 20 of 20 |
 | Launch-kit text similarity (3-gram Jaccard, lower = more specific) | — no kit (v1 template copy: 0.23) | 0.21 |
@@ -61,6 +69,7 @@
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is `runAgent` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
 - Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
+- **Slider (F11)**: each v2 plan carries scores at 11 budgets (0.25×-4×). For every slider step (~60-110 per brief) the eval re-runs the same pure client code (`scenarioAt`): allocation must sum to the slider budget, 1× must equal the saved plan, shares and the LinkedIn rule must hold, and the channel count must never fall as the budget rises. "Impressions never fall" is reported but not gated: the planner optimises channel fit, so when a budget unlocks more channels (2 → 5 at ₹2,000) or a pricier channel enters, impressions can dip while the mix gets broader. Recompute time is per slider move in Node on this machine.
 - **Ranges (F14)**: every reach / clicks / conversions forecast is low / mid / high. Default band ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok, with the combined high capped at the pool. Totals sum the channel lows/mids/highs. The eval fails if any range is out of order or a Meta-backed high exceeds the pool.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
 - **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.

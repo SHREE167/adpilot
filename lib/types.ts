@@ -261,6 +261,8 @@ export interface PlanResult {
   realityCheck?: RealityCheck;
   /** F9: exact TreeSHAP per channel; absent on plans made before M3. */
   shap?: PlanShap;
+  /** F11: budget slider grid; absent on plans made before M5 (no slider shown). */
+  budgetGrid?: BudgetGrid;
   /** F7: per-channel launch kit; absent on plans made before M4. */
   launchKit?: LaunchKit;
   trace?: PlanTrace;
@@ -286,6 +288,32 @@ export interface ChannelShap {
   /** Sum of every other feature's contribution. */
   other: number;
   otherCount: number;
+}
+
+/** F11: one precomputed budget on the slider. */
+export interface BudgetGridPoint {
+  budget: number;
+  /** budget / original budget, e.g. 0.25 ... 4. */
+  factor: number;
+  /** Raw XGBoost score per channel at this budget, before policy rules (all 12). */
+  scores: Record<ChannelId, number>;
+  /** Exact TreeSHAP only for the channels in the mix at this budget (keeps plans lean). */
+  shap: ChannelShap[];
+}
+
+/**
+ * F11: scores at ~11 log-spaced budgets (0.25x-4x). The browser re-runs the pure
+ * allocate + forecast on these; the model itself never leaves the server.
+ */
+export interface BudgetGrid {
+  version: 1;
+  /** The plan's own budget (factor 1, always a grid point). */
+  base: number;
+  points: BudgetGridPoint[];
+  /** Rate card snapshot the plan was priced with. */
+  rateCard: { version: string; channels: RateCardEntry[] };
+  /** Brief facts for the budget policy (LinkedIn below ₹15k etc). */
+  policy: { b2b: boolean; professional: boolean; goal: string };
 }
 
 export interface PlanShap {

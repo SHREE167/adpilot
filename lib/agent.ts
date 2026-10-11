@@ -7,9 +7,11 @@ import { fetchCreators } from "./enrich/youtube-creators";
 import { fetchAudience } from "./enrich/meta-reach";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
+import { buildBudgetGrid } from "./budget-grid";
 import { buildRealityCheck, hasRealityInputs } from "./reality-check";
 import {
   ESTIMATE_DISCLAIMER,
+  type BudgetGrid,
   type ChannelAllocation,
   type EnrichmentBundle,
   type LaunchKit,
@@ -114,6 +116,17 @@ export async function runAgent(
     );
   } else {
     trace.skip("shap", "baseline (v1)");
+  }
+  // Step 4c (F11): scores at 11 budgets (0.25x-4x) for the client-side slider. Model stays on the server.
+  let budgetGrid: BudgetGrid | undefined;
+  if (v2) {
+    budgetGrid = await trace.span(
+      "budget_grid",
+      () => buildBudgetGrid(input, { category: product.category, priceTier: product.priceTier }, rateCard),
+      { meta: (g) => ({ points: g.points.length, shap: g.points.reduce((s, p) => s + p.shap.length, 0) }) }
+    );
+  } else {
+    trace.skip("budget_grid", "baseline (v1)");
   }
   // Step 5: signals that change the numbers: festival-week CPM multipliers (F3)
   // and Meta's audience pool as a reach ceiling (F4). Only ok signals count.
@@ -330,6 +343,7 @@ export async function runAgent(
     ...(zeroRupee ? { zeroRupee } : {}),
     ...(realityCheck ? { realityCheck } : {}),
     ...(shap ? { shap } : {}),
+    ...(budgetGrid ? { budgetGrid } : {}),
     ...(launchKit ? { launchKit } : {}),
     trace: planTrace,
   };

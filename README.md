@@ -56,7 +56,7 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
 | M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | done |
 | M4 | Meta reach, YouTube creators, launch kit + grounding guard | done (Meta runs on a mock fixture until keys are added) |
-| M5 | Budget slider, forecast ranges | in progress (ranges done) |
+| M5 | Budget slider, forecast ranges | done |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
 | M7 | Ad previews, share/print, trace page | |
 | M8 | Eval v2 vs v1 report, demo script | |
@@ -96,6 +96,7 @@ What M4 adds:
 
 What M5 adds:
 
+- **Budget slider (F11)**: "Try another budget" under the hero KPIs (and pinned to the bottom of the screen once you scroll). The server scores every channel at 11 log-spaced budgets from 0.25× to 4× (`PlanResult.budgetGrid`, raw scores for all 12 channels, TreeSHAP only for each point's mix); the browser re-runs the same pure allocate + forecast + reality check code at the exact slider budget, snapping scores to the nearest grid point and applying the budget policy (LinkedIn below ₹15,000) exactly. Totals always equal the slider; mix tiles, rupee split, KPIs, charts, ranges and the break-even verdict update in well under 50 ms. Notes show where channels enter or leave ("LinkedIn appears above ₹15,000"); "Reset to original" returns to the saved plan. Signals are reused, never re-fetched, and `ml/model.json` never ships to the browser. Copy, the launch kit and placements say they were written for the original budget. Plans saved before M5 show no slider.
 - **Forecast ranges (F14)**: reach, clicks and conversions are low / mid / high everywhere they appear (KPI tiles, channel tiles and cards, the weekly chart as a shaded clicks band, the markdown export). The default band is ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok ("backed by Meta pool") and the combined high never exceeds the pool. Totals sum the channel lows and highs. The reality check keeps its verdict on the middle estimate and adds the conversion rate needed across the click range. Bands are data (`kind: default | signal | calibrated`), so M6 can switch to intervals calibrated from real results. Plans saved before M5 get a default band derived on the fly.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.

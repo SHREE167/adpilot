@@ -1,6 +1,8 @@
 // F16 eval metrics. Pure functions over PlanResult; no I/O, no network.
 import { groundingSet } from "@/lib/grounding-guard";
 import { kitEvidence, kitTexts } from "@/lib/launch-kit";
+import { linkedinAllowed } from "@/lib/policy";
+import { scenarioAt, sliderSteps } from "@/lib/scenario";
 import type { PlanResult } from "@/lib/types";
 
 /** 1 - |A ∩ B| / |A ∪ B|. Two empty sets are identical (0). */
@@ -198,4 +200,77 @@ export function rangeChecks(plan: PlanResult): { checked: number; ordered: numbe
   const pool = plan.enrichment?.audience?.status === "ok" ? plan.enrichment.audience.data?.upper : undefined;
   const poolOk = !signalBands || pool === undefined || metaHigh <= pool;
   return { checked, ordered, signalBands, poolOk };
+}
+
+/** F11: budget slider checks over every slider step of a plan. */
+export interface SliderCheck {
+  steps: number;
+  sumOk: boolean;
+  /** Scenario at the plan's own budget equals the saved plan. */
+  sameAt1x: boolean;
+  /** 1-5 channels; none above 50% once the budget is >= ₹3,000. */
+  sharesOk: boolean;
+  /** LinkedIn never in the mix below ₹15,000 unless the policy allows it. */
+  policyOk: boolean;
+  /** Mid impressions never fall as the budget rises. */
+  impressionsMonotone: boolean;
+  /** Channel count never falls as the budget rises. */
+  countMonotone: boolean;
+  rangesOk: boolean;
+  /** ms per scenario recompute. */
+  msPerStep: number[];
+  /** Channel ids at 0.25x and 4x. */
+  low: string[];
+  high: string[];
+}
+
+export function sliderCheck(plan: PlanResult): SliderCheck | null {
+  const grid = plan.budgetGrid;
+  if (!grid) return null;
+  const steps = sliderSteps(grid);
+  let sumOk = true;
+  let sharesOk = true;
+  let policyOk = true;
+  let impressionsMonotone = true;
+  let countMonotone = true;
+  let rangesOk = true;
+  let prevImpr = -1;
+  let prevCount = 0;
+  const ms: number[] = [];
+  for (const b of steps) {
+    const t0 = performance.now();
+    const s = scenarioAt(plan, b);
+    ms.push(performance.now() - t0);
+    if (s.mix.reduce((x, m) => x + m.budget, 0) !== b || s.totals.budget !== b) sumOk = false;
+    if (s.mix.length < 1 || s.mix.length > 5) sharesOk = false;
+    if (b >= 3000 && s.mix.some((m) => m.budget / b > 0.5 + 1e-9)) sharesOk = false;
+    if (s.mix.some((m) => m.channelId === "linkedin") && !linkedinAllowed(b, grid.policy)) policyOk = false;
+    if (s.totals.impressions < prevImpr) impressionsMonotone = false;
+    if (s.mix.length < prevCount) countMonotone = false;
+    for (const k of ["reach", "clicks", "conversions"] as const) {
+      const r = s.totals.ranges?.[k];
+      if (!r || !(r.low <= r.mid && r.mid <= r.high)) rangesOk = false;
+    }
+    prevImpr = s.totals.impressions;
+    prevCount = s.mix.length;
+  }
+  const at1 = scenarioAt(plan, grid.base);
+  const sameAt1x =
+    JSON.stringify(at1.mix.map((m) => [m.channelId, m.budget, m.forecast])) ===
+      JSON.stringify(plan.mix.map((m) => [m.channelId, m.budget, m.forecast])) &&
+    JSON.stringify(at1.totals) === JSON.stringify(plan.totals);
+  const ids = (b: number) => scenarioAt(plan, b).mix.map((m) => m.channelId).sort();
+  return {
+    steps: steps.length,
+    sumOk,
+    sameAt1x,
+    sharesOk,
+    policyOk,
+    impressionsMonotone,
+    countMonotone,
+    rangesOk,
+    msPerStep: ms,
+    low: ids(grid.points[0].budget),
+    high: ids(grid.points[grid.points.length - 1].budget),
+  };
 }

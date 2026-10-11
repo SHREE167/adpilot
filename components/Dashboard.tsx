@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
+import { BudgetSlider } from "@/components/BudgetSlider";
 import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
 import { AudienceCard } from "@/components/AudienceCard";
@@ -22,6 +23,7 @@ import { channelColors } from "@/lib/theme";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
 import { rangesOf, rangeText, totalsRangesOf } from "@/lib/ranges";
+import { scenarioAt, sliderSteps, transitions } from "@/lib/scenario";
 import type { ChannelForecast, ForecastRange, PlanResult, Signal } from "@/lib/types";
 
 const KIND_LABEL: Record<string, string> = {
@@ -34,7 +36,19 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 /** Centered section header: chapter number, title, optional one-line subtitle. */
-function SectionHead({ n, of, title, sub }: { n: string; of: string; title: string; sub?: ReactNode }) {
+function SectionHead({
+  n,
+  of,
+  title,
+  sub,
+  note,
+}: {
+  n: string;
+  of: string;
+  title: string;
+  sub?: ReactNode;
+  note?: string;
+}) {
   return (
     <header className="section-head">
       <p className="story-bit kicker num">
@@ -42,6 +56,11 @@ function SectionHead({ n, of, title, sub }: { n: string; of: string; title: stri
       </p>
       <h2 className="story-bit display">{title}</h2>
       {sub ? <p className="story-bit sub">{sub}</p> : null}
+      {note ? (
+        <p className="mx-auto mt-3 inline-block rounded-md border border-rule-strong px-3 py-1 text-sm text-fog" role="note">
+          {note}
+        </p>
+      ) : null}
     </header>
   );
 }
@@ -79,9 +98,47 @@ function Cell({ id, alone, children }: { id?: string; alone?: boolean; children:
   );
 }
 
-export function Dashboard({ plan }: { plan: PlanResult }) {
+export function Dashboard({ plan: saved }: { plan: PlanResult }) {
   const [copied, setCopied] = useState(false);
-  const md = useMemo(() => planToMarkdown(plan), [plan]);
+  const md = useMemo(() => planToMarkdown(saved), [saved]);
+
+  // F11: budget slider. The saved plan is the source; `plan` below is the view at the slider budget.
+  const grid = saved.budgetGrid;
+  const steps = useMemo(() => (grid ? sliderSteps(grid) : []), [grid]);
+  const moves = useMemo(() => (grid ? transitions(saved, steps) : []), [saved, grid, steps]);
+  const [budget, setBudget] = useState<number>(grid?.base ?? saved.input.budget);
+  const shownBudget = useDeferredValue(budget);
+  const scenario = useMemo(
+    () => (grid && shownBudget !== grid.base ? scenarioAt(saved, shownBudget) : null),
+    [saved, grid, shownBudget]
+  );
+  const plan: PlanResult = useMemo(
+    () =>
+      scenario
+        ? {
+            ...saved,
+            input: { ...saved.input, budget: scenario.budget },
+            mix: scenario.mix,
+            rejected: scenario.rejected,
+            totals: scenario.totals,
+            weeklyForecast: scenario.weeklyForecast,
+            realityCheck: scenario.realityCheck,
+          }
+        : saved,
+    [saved, scenario]
+  );
+  const staleNote = scenario
+    ? `Written for the original ${inr(saved.input.budget)} plan; the slider does not rewrite it.`
+    : undefined;
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [sliderOut, setSliderOut] = useState(false);
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setSliderOut(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [grid]);
   const mixSum = plan.mix.reduce((s, r) => s + r.budget, 0);
   const name = plan.product?.recognizedName || plan.input.product_name;
 
@@ -112,7 +169,10 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const zeroRupee = plan.zeroRupee || [];
   const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const reality = plan.realityCheck;
-  const shapBy = new Map((plan.shap?.channels || []).map((c) => [c.channelId, c]));
+  const shapBy = new Map((scenario ? scenario.shap : plan.shap?.channels || []).map((c) => [c.channelId, c]));
+  const shapNote = scenario
+    ? `${plan.shap?.note ?? ""} Scores at ${inr(scenario.point.budget)}, the nearest precomputed budget.`.trim()
+    : (plan.shap?.note ?? "");
   const placements = plan.placements || [];
   const kit = plan.launchKit?.channels.length ? plan.launchKit : undefined;
 
@@ -155,7 +215,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   ];
 
   return (
-    <div className="story-reel">
+    <div className={`story-reel ${grid && sliderOut ? "pb-20" : ""}`}>
       <nav className="story-dots hidden xl:flex" aria-label="Sections">
         {[...sectionIds, "sources"].map((id, i) => (
           <a key={id} href={`#${id}`} className="story-dot" title={id}>
@@ -210,7 +270,18 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             Compare
           </Link>
         </div>
+        {grid ? (
+          <div ref={sliderRef} className="story-bit">
+            <BudgetSlider steps={steps} value={budget} base={grid.base} onChange={setBudget} transitions={moves} />
+          </div>
+        ) : null}
       </StoryScene>
+
+      {grid && sliderOut ? (
+        <div className="slider-sticky" role="region" aria-label="Budget slider">
+          <BudgetSlider steps={steps} value={budget} base={grid.base} onChange={setBudget} transitions={moves} compact />
+        </div>
+      ) : null}
 
       {hasCheck ? (
         <StoryScene id="check" className="story-chapter">
@@ -303,7 +374,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
 
       {zeroRupee.length ? (
         <StoryScene id="free" className="story-chapter">
-          <SectionHead {...chapter("free")} title="Before you spend anything" />
+          <SectionHead {...chapter("free")} title="Before you spend anything" note={staleNote} />
           <ZeroRupeeCard items={zeroRupee} signals={signals} />
         </StoryScene>
       ) : null}
@@ -348,7 +419,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
                 {row.forecast.reachCapped ? " · reach capped to Meta pool" : ""}
               </p>
               {shapBy.get(row.channelId) ? (
-                <ShapWaterfall shap={shapBy.get(row.channelId)!} note={plan.shap!.note} />
+                <ShapWaterfall shap={shapBy.get(row.channelId)!} note={shapNote} />
               ) : null}
             </article>
           ))}
@@ -379,6 +450,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             {...chapter("post")}
             title="Where to actually post"
             sub="Not “Google”: these sites, apps and query themes. ESTIMATE inventory; we do not log into Google Ads."
+            note={staleNote}
           />
           <div className="grid-3">
             {placements.map((p) => (
@@ -401,7 +473,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
 
       {kit ? (
         <StoryScene id="kit" className="story-chapter">
-          <SectionHead {...chapter("kit")} title="Launch kit: what to set up on day one" />
+          <SectionHead {...chapter("kit")} title="Launch kit: what to set up on day one" note={staleNote} />
           <LaunchKit kit={kit} enrichment={plan.enrichment} />
         </StoryScene>
       ) : null}
@@ -422,7 +494,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       </StoryScene>
 
       <StoryScene id="ads" className="story-chapter">
-        <SectionHead {...chapter("ads")} title="Ad angles" />
+        <SectionHead {...chapter("ads")} title="Ad angles" note={staleNote} />
         <div className="grid-3">
           {plan.adAngles.map((a, i) => (
             <article key={`${a.headline}-${i}`} className="story-bit card panel flex flex-col">
@@ -438,7 +510,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       </StoryScene>
 
       <StoryScene id="outreach" className="story-chapter">
-        <SectionHead {...chapter("outreach")} title="Outreach scripts" />
+        <SectionHead {...chapter("outreach")} title="Outreach scripts" note={staleNote} />
         <div className="grid-2">
           {plan.outreach.map((o, i) => (
             <article key={`${o.channel}-${i}`} className="story-bit card panel">

@@ -78,6 +78,10 @@ export function StoryScene({
   );
 }
 
+/**
+ * Counts up once, the first time the number scrolls into view. After that a new
+ * value (e.g. from the budget slider) is shown immediately, with no re-count.
+ */
 export function CountUp({
   value,
   format,
@@ -88,36 +92,55 @@ export function CountUp({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const fmtRef = useRef(format);
+  fmtRef.current = format;
+  const played = useRef(false);
+  const latest = useRef(value);
+  latest.current = value;
+  const fmt = (n: number) => (fmtRef.current ?? ((x: number) => String(Math.round(x))))(n);
+
+  // First appearance: one count-up (or the final value under reduced motion).
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const fmt = format ?? ((n: number) => String(Math.round(n)));
     if (reducedMotion()) {
-      el.textContent = fmt(value);
+      played.current = true;
+      el.textContent = fmt(latest.current);
       return;
     }
     const obj = { n: 0 };
     const io = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting) return;
+        io.disconnect();
         animate(obj, {
-          n: value,
-          duration: 1600,
-          ease: "out(5)",
+          n: latest.current,
+          duration: 1200,
+          ease: "out(4)",
           onUpdate: () => {
-            el.textContent = fmt(obj.n);
+            if (!played.current) el.textContent = fmt(obj.n);
+          },
+          onComplete: () => {
+            played.current = true;
+            el.textContent = fmt(latest.current);
           },
         });
-        io.disconnect();
       },
       { threshold: 0.35 }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [value, format]);
+  }, []);
+
+  // Later changes: show the new number straight away.
+  useEffect(() => {
+    const el = ref.current;
+    if (el && played.current) el.textContent = fmt(value);
+  }, [value]);
+
   return (
     <span ref={ref} className={className}>
-      {format ? format(0) : "0"}
+      {fmt(0)}
     </span>
   );
 }
