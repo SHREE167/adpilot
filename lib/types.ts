@@ -54,6 +54,10 @@ export interface PlanInput {
   audience_notes: string;
   goal: GoalId | string;
   language: string;
+  /** F8 (optional): price of one sale in INR. Both price and margin are needed for the reality check. */
+  price?: number;
+  /** F8 (optional): gross margin per sale, percent (1-95). */
+  margin?: number;
 }
 
 export interface SiteSnapshot {
@@ -213,7 +217,42 @@ export interface PlanResult {
   enrichment?: EnrichmentBundle;
   /** F10: free actions before any paid spend (rule-based, from signals + brief). */
   zeroRupee?: ZeroRupeeItem[];
+  /** F8: break-even verdict; absent when the brief has no price/margin. */
+  realityCheck?: RealityCheck;
   trace?: PlanTrace;
+}
+
+export type RealityVerdict = "healthy" | "tight" | "likely_loss";
+
+/** One goal's click -> paying-customer conversion band (data/benchmarks.json, ESTIMATE). */
+export interface ConversionBenchmark {
+  goal: string;
+  /** Fractions 0-1. */
+  low: number;
+  typical: number;
+  high: number;
+}
+
+/** F8: can this budget pay for itself? Pure math on the brief + forecast clicks (ESTIMATE). */
+export interface RealityCheck {
+  price: number;
+  marginPct: number;
+  profitPerSale: number;
+  budget: number;
+  breakEvenUnits: number;
+  /** Forecast clicks the conversion rate is measured against. */
+  clicks: number;
+  /** breakEvenUnits / clicks as a fraction; null when the forecast has no clicks. */
+  requiredCvr: number | null;
+  benchmark: ConversionBenchmark;
+  /** requiredCvr / benchmark.typical; null when there are no clicks. */
+  ratio: number | null;
+  verdict: RealityVerdict;
+  headline: string;
+  detail: string;
+  advice: string;
+  /** Suggested smaller first test (tight / likely loss only). */
+  testBudget?: number;
 }
 
 /* ---------- v2 enrichment (client-safe types; logic lives in lib/enrich) ---------- */

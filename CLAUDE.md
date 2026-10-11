@@ -35,6 +35,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/enrich/places.ts`, `components/LocalMarketCard.tsx` | F2: Places Text Search (competitors: Enterprise mask with rating; own name: Pro mask), 7d cache, skipped for B2B/SaaS/online-only. Raw recorded responses in `fixtures/api-raw/`. |
 | `lib/enrich/calendar.ts` | F3: festival/season window + weekly CPM multipliers. |
 | `lib/zero-rupee.ts`, `components/ZeroRupeeCard.tsx` | F10: pure rule ranking (readiness, Places, category, goal, budget) → up to 4 free actions with a `why`; `PlanResult.zeroRupee`. |
+| `lib/reality-check.ts`, `data/benchmarks.json`, `components/RealityCard.tsx` | F8: optional price + margin → break-even units, required CVR vs per-goal band (ESTIMATE) → Healthy / Tight / Likely loss; `PlanResult.realityCheck`. |
 | `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
 | `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |
 | `lib/recognize.ts`, `lib/llm.ts` | Heuristic product intel + optional LLM (Groq → OpenAI → Gemini). |

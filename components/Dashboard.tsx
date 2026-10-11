@@ -9,6 +9,7 @@ import { CountUp, StoryScene } from "@/components/Motion";
 import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { PlanHealth } from "@/components/PlanHealth";
 import { ReadinessCard } from "@/components/ReadinessCard";
+import { RealityCard } from "@/components/RealityCard";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
 import { useTheme } from "@/components/ThemeToggle";
@@ -94,8 +95,10 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const showLocal = showLocalMarket(localMarket);
   const zeroRupee = plan.zeroRupee || [];
   const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
+  const reality = plan.realityCheck;
   const chapterIds = [
     "cover",
+    reality ? "reality" : null,
     plan.product ? "read" : null,
     readiness ? "ready" : null,
     showLocal ? "local" : null,
@@ -174,6 +177,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
           Scroll the story ↓
         </p>
       </StoryScene>
+
+      {reality ? (
+        <StoryScene id="reality" className="story-chapter">
+          <Chapter {...chapter("reality")} title="Can this pay for itself?" />
+          <RealityCard rc={reality} hasFreeActions={zeroRupee.length > 0} />
+        </StoryScene>
+      ) : null}
 
       {plan.product ? (
         <StoryScene id="read" className="story-chapter">

@@ -38,6 +38,17 @@ export function planToMarkdown(plan: PlanResult): string {
     lines.push(`- Not scraped (${plan.site.scrapeError || "skipped"}). Used product_name.`);
   }
   lines.push("");
+  const rc = plan.realityCheck;
+  if (rc) {
+    const label = { healthy: "Healthy", tight: "Tight", likely_loss: "Likely loss" }[rc.verdict];
+    lines.push("## Reality check (ESTIMATE)");
+    lines.push("");
+    lines.push(`- **Verdict:** ${label}`);
+    lines.push(`- ${rc.headline} ${rc.detail}`);
+    lines.push(`- Price ${inr(rc.price)} × margin ${rc.marginPct}% = ${inr(rc.profitPerSale)} profit per sale; ${compactNumber(rc.clicks)} forecast clicks.`);
+    lines.push(`- ${rc.advice}`);
+    lines.push("");
+  }
   lines.push("## Forecast totals (ESTIMATE)");
   lines.push("");
   lines.push(`| Metric | Value |`);

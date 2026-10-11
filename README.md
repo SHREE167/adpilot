@@ -54,7 +54,7 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | --- | --- | --- |
 | M1 | Enrichment framework (Signal, timeouts, cache, mock mode), agent trace, LIVE/ESTIMATE badges, site readiness (tracking + funnel), festival calendar | done |
 | M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
-| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | next |
+| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | in progress |
 | M4 | Meta reach, YouTube creators, launch kit + grounding guard | |
 | M5 | Budget slider, forecast ranges | |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
@@ -76,6 +76,10 @@ What M2 adds:
 - **Your street (Google Places)**: "{keyword} in {city}" competitors (count, average rating, top 5) and a search for the business itself ("Not on Google Maps: create a free Business Profile"). Strict field masks, 7-day cache, only public names and ratings kept. Skipped for SaaS/B2B/online-only briefs. Needs `GOOGLE_PLACES_API_KEY`.
 - **Before you spend anything (zero-rupee)**: up to 4 free actions ranked from signals and the brief (Business Profile, WhatsApp Business catalog + Status, organic Reels, local groups, founder LinkedIn). Each item says why; no item fires without a reason.
 - Market density feeds the zero-rupee layer and the store_visits ranking. Using it in ad copy waits for the grounded launch kit (F7, M4), so copy never quotes a number the LLM could change.
+
+What M3 adds:
+
+- **Can this pay for itself? (reality check)**: two optional form fields, price of one sale (₹) and margin %. AdPilot works out `breakEvenUnits = ceil(budget / (price × margin))` and `requiredCvr = units / forecast clicks`, then compares that to a per-goal band in `data/benchmarks.json` (ESTIMATE, editable). The verdict is **Healthy** (at or under typical), **Tight** (up to 2× typical) or **Likely loss** (more than 2×). Tight and Likely loss suggest a smaller first test and link to the free actions. Leave the fields empty and the check is skipped; it never blocks the plan.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 
@@ -243,6 +247,7 @@ ml/train.py                    retrains the booster
 lib/scoring.ts                 model scores + policy rules
 lib/allocate.ts                2–5 channels, sum == budget
 lib/forecast.ts                rate-card math
+lib/reality-check.ts           break-even verdict (data/benchmarks.json)
 lib/rate-card.ts               India 2026 ESTIMATES
 lib/llm.ts                     optional copy
 lib/copy-templates.ts          no-key fallback

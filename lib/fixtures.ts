@@ -34,12 +34,13 @@ export const SAMPLE_FIXTURES: {
     id: "snack-chennai",
     label: "₹3,000 student snack · Chennai",
     blurb: "Tamil-first campus snack. Tiny budget, local chat + Reels.",
-    input: SNACK_CHENNAI,
+    // F8 demo: Rs 20 packs at 30% margin (from the brief), so the reality check shows.
+    input: { ...SNACK_CHENNAI, price: 20, margin: 30 },
   },
   {
     id: "b2b-saas",
     label: "₹40,000 B2B SaaS · Bengaluru",
     blurb: "Professional pipeline. LinkedIn + Search can actually clear the CPC bar.",
-    input: B2B_SAAS,
+    input: { ...B2B_SAAS, price: 60000, margin: 70 },
   },
 ];

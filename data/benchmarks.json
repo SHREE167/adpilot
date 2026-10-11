@@ -1,0 +1,14 @@
+{
+  "label": "ESTIMATE",
+  "verified": false,
+  "metric": "click to paying customer conversion rate (fraction of ad clicks that become a sale)",
+  "note": "AdPilot planning assumptions for small Indian businesses, not measured data. Edit the low/typical/high bands per goal; F13 actuals will refine them. The reality check compares the break-even conversion rate to `typical`.",
+  "goals": {
+    "sales": { "low": 0.005, "typical": 0.01, "high": 0.03 },
+    "store_visits": { "low": 0.005, "typical": 0.015, "high": 0.04 },
+    "leads": { "low": 0.003, "typical": 0.008, "high": 0.02 },
+    "b2b": { "low": 0.001, "typical": 0.003, "high": 0.01 },
+    "app_installs": { "low": 0.002, "typical": 0.005, "high": 0.015 },
+    "awareness": { "low": 0.001, "typical": 0.003, "high": 0.008 }
+  }
+}

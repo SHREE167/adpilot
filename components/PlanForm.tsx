@@ -48,10 +48,41 @@ export function PlanForm() {
   const [totalMs, setTotalMs] = useState<number | undefined>(undefined);
   const [note, setNote] = useState<string | null>(null);
 
+  // F8: optional break-even pair, kept as text so both can be blank.
+  const [price, setPrice] = useState("");
+  const [margin, setMargin] = useState("");
+  const priceError =
+    price.trim() && !(Number(price) > 0) ? "Enter a price above ₹0." : null;
+  const marginError =
+    margin.trim() && !(Number(margin) >= 1 && Number(margin) <= 95)
+      ? "Enter a margin between 1% and 95%."
+      : null;
+  const halfFilled = Boolean(price.trim()) !== Boolean(margin.trim());
+
   const canSubmit = useMemo(
-    () => form.product_name.trim() && form.city.trim() && form.budget >= 500,
-    [form]
+    () =>
+      form.product_name.trim() &&
+      form.city.trim() &&
+      form.budget >= 500 &&
+      !priceError &&
+      !marginError,
+    [form, priceError, marginError]
   );
+
+  /** The brief as sent: the pair only when both are filled. */
+  function brief(): PlanInput {
+    const rest: PlanInput = { ...form };
+    delete rest.price;
+    delete rest.margin;
+    if (!price.trim() || !margin.trim()) return rest;
+    return { ...rest, price: Number(price), margin: Number(margin) };
+  }
+
+  function loadSample(input: PlanInput) {
+    setForm(input);
+    setPrice(input.price ? String(input.price) : "");
+    setMargin(input.margin ? String(input.margin) : "");
+  }
 
   function set<K extends keyof PlanInput>(key: K, value: PlanInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -72,7 +103,7 @@ export function PlanForm() {
   /** No stream at all (old proxy, network): the Server Action, honestly labelled. */
   async function runWithoutProgress() {
     setNote("Live progress is unavailable on this connection. Waiting for the full plan…");
-    const result = await createPlan(form);
+    const result = await createPlan(brief());
     if ("error" in result) return fail(result.error);
     finish(result.plan);
   }
@@ -93,7 +124,7 @@ export function PlanForm() {
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(brief()),
       });
       if (!res.ok || !res.body) {
         const body = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -164,7 +195,7 @@ export function PlanForm() {
               key={s.id}
               type="button"
               className="btn btn-ghost text-xs"
-              onClick={() => setForm(s.input)}
+              onClick={() => loadSample(s.input)}
             >
               Load {s.label}
             </button>
@@ -261,6 +292,62 @@ export function PlanForm() {
             />
           </div>
         </div>
+
+        <fieldset className="mt-10 rounded-2xl border border-rule p-5 sm:p-6">
+          <legend className="px-2 text-lg text-paper">Break-even check (optional)</legend>
+          <p className="max-w-xl text-fog">
+            Add what one sale earns you and we will tell you how many sales this budget needs to
+            pay for itself.
+          </p>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div className="field">
+              <label htmlFor="price">Price of one sale (₹)</label>
+              <input
+                id="price"
+                type="number"
+                inputMode="decimal"
+                min={1}
+                step="any"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="199"
+                aria-invalid={Boolean(priceError)}
+                aria-describedby={priceError ? "price-error" : undefined}
+              />
+              {priceError ? (
+                <p id="price-error" className="mt-2 text-sm text-danger">
+                  {priceError}
+                </p>
+              ) : null}
+            </div>
+            <div className="field">
+              <label htmlFor="margin">Your margin (%)</label>
+              <input
+                id="margin"
+                type="number"
+                inputMode="decimal"
+                min={1}
+                max={95}
+                step="any"
+                value={margin}
+                onChange={(e) => setMargin(e.target.value)}
+                placeholder="30"
+                aria-invalid={Boolean(marginError)}
+                aria-describedby={marginError ? "margin-error" : undefined}
+              />
+              {marginError ? (
+                <p id="margin-error" className="mt-2 text-sm text-danger">
+                  {marginError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {halfFilled && !priceError && !marginError ? (
+            <p className="mt-4 text-sm text-fog" role="status">
+              Fill in both to get the break-even check. With one, the plan skips it.
+            </p>
+          ) : null}
+        </fieldset>
 
 
         <div className="mt-10 flex flex-wrap items-center gap-4">

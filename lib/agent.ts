@@ -5,11 +5,14 @@ import { buildCalendar } from "./enrich/calendar";
 import { fetchLocalMarket } from "./enrich/places";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
+import { buildRealityCheck, hasRealityInputs } from "./reality-check";
 import {
   ESTIMATE_DISCLAIMER,
   type EnrichmentBundle,
   type PlanInput,
   type PlanResult,
+  type RealityCheck,
+  type TraceMeta,
 } from "./types";
 import { newPlanId } from "./format";
 import { rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
@@ -26,7 +29,7 @@ const BUDGET_MS = 14000;
 
 /**
  * 1 scrape → 2 recognize product → 3 enrich (parallel, optional) → 4 XGBoost
- * → 5 signal adjust → 6 allocate → 7 forecast → 8 copy. Every step is a trace span.
+ * → 5 signal adjust → 6 allocate → 7 forecast → 8 reality check → copy. Every step is a trace span.
  */
 export async function runAgent(
   input: PlanInput,
@@ -113,6 +116,23 @@ export async function runAgent(
     () => rollupForecast(mix, input, product.priceTier, season),
     { meta: (f) => ({ impressions: f.totals.impressions, weeks: f.weeklyForecast.length }) }
   );
+  // Step 8 (F8): break-even verdict, only when the brief has price + margin.
+  let realityCheck: RealityCheck | undefined;
+  if (hasRealityInputs(input)) {
+    realityCheck = await trace.span(
+      "reality_check",
+      () => {
+        try {
+          return buildRealityCheck({ input, clicks: totals.clicks });
+        } catch {
+          return undefined;
+        }
+      },
+      { meta: (r): TraceMeta => (r ? { verdict: r.verdict, breakEvenUnits: r.breakEvenUnits } : { verdict: "none" }) }
+    );
+  } else {
+    trace.skip("reality_check", "no price/margin");
+  }
   const templates = await trace.span("copy_template", () =>
     templateCreative(input, mix, product.category, product.priceTier, product)
   );
@@ -169,6 +189,7 @@ export async function runAgent(
     planVersion: 2,
     enrichment,
     zeroRupee,
+    ...(realityCheck ? { realityCheck } : {}),
     trace: planTrace,
   };
 }
