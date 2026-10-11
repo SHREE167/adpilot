@@ -1,0 +1,7 @@
+{
+  "fetchedAt": "2026-10-11T06:00:00.000Z",
+  "data": {
+    "url": "http://kalamkari-threads.example/",
+    "html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Kalamkari Threads | Hand-block printed kurtas</title><meta name=\"description\" content=\"Hand-block printed cotton kurtas and dupattas, shipped across India from Delhi.\"><meta property=\"og:image\" content=\"http://kalamkari-threads.example/og.jpg\"><script>!function(f,b,e,v,n,t,s){n=f.fbq=function(){};}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','1234567890');fbq('track','PageView');</script><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"ClothingStore\",\"name\":\"Kalamkari Threads\"}</script></head><body><h1>Hand-block printed kurtas</h1><p>Small-batch cotton kurtas from Rs 1,299. Free shipping above Rs 1,999.</p><a href=\"/shop\">Shop now</a></body></html>"
+  }
+}

@@ -16,6 +16,7 @@ npm run build        # production build
 npm run lint         # eslint
 npx tsc --noEmit     # type check
 npm test             # node:test unit tests (scripts/run-tests.mjs, no deps)
+npm run eval         # F16: v1 vs v2 on eval/golden-briefs.json, mock mode → eval/report.md
 npm run train-model  # retrain XGBoost (needs ml/.venv with Python)
 ```
 
@@ -49,6 +50,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `components/Dashboard.tsx` | Story-scroll result view (glass/gold, Fraunces + Syne, anime.js). |
 | `components/ProvenanceBadge.tsx`, `ReadinessCard.tsx`, `TimingCard.tsx`, `DataSources.tsx` | LIVE / ESTIMATE / Not connected badges and the v2 cards. |
 | `fixtures/` | Sample briefs, v1 plan snapshots, `fixtures/api/<source>/` mock fixtures. |
+| `eval/run.ts`, `eval/metrics.ts`, `eval/golden-briefs.json`, `scripts/run-eval.mjs` | F16: `runAgent(input, {baseline: true})` = v1 path; specificity, diversity, signature, reality coverage, additivity, latency → `eval/report.md`. |
 | `tests/`, `scripts/` | node:test unit tests + a no-dependency TS test runner (resolve hooks). |
 
 ## Engineering rules (brief section 5)

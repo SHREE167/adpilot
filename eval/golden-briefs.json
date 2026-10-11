@@ -1,0 +1,313 @@
+{
+  "note": "F16 golden briefs: 5 cities, 5 categories, budgets ₹1k-₹100k, all 6 goals, English/Tamil/Hindi. Domains point at fixtures/api/site mocks; briefs without price/margin exercise the reality-check skip path.",
+  "briefs": [
+    {
+      "id": "sig-3k-student",
+      "label": "₹3k student snack · Chennai",
+      "input": {
+        "domain": "campus-crunch.example.in",
+        "product_name": "Campus Crunch masala peanuts",
+        "budget": 3000,
+        "city": "Chennai",
+        "audience_age": "18-24",
+        "audience_notes": "College students in Anna Nagar and Velachery hostels. Impulse snack, Tamil + English, price sensitive.",
+        "goal": "sales",
+        "language": "Tamil",
+        "price": 20,
+        "margin": 30
+      }
+    },
+    {
+      "id": "sig-40k-b2b",
+      "label": "₹40k B2B SaaS · Bengaluru",
+      "input": {
+        "domain": "pipeboard-crm.example",
+        "product_name": "Pipeboard inbound-to-demo CRM for Indian B2B teams",
+        "budget": 40000,
+        "city": "Bengaluru",
+        "audience_age": "25-45",
+        "audience_notes": "Professional buyers: founders, sales heads, RevOps at 10-200 person SaaS and IT services firms. Decision makers.",
+        "goal": "b2b",
+        "language": "English",
+        "price": 60000,
+        "margin": 70
+      }
+    },
+    {
+      "id": "chn-biryani",
+      "label": "Biryani restaurant · Chennai",
+      "input": {
+        "domain": "",
+        "product_name": "Thalappakatti-style biryani restaurant, Velachery",
+        "budget": 15000,
+        "city": "Chennai",
+        "audience_age": "22-45",
+        "audience_notes": "Families and office crowd near Velachery. Weekend dine-in and takeaway.",
+        "goal": "store_visits",
+        "language": "Tamil",
+        "price": 250,
+        "margin": 40
+      }
+    },
+    {
+      "id": "chn-neet",
+      "label": "NEET coaching · Chennai",
+      "input": {
+        "domain": "",
+        "product_name": "NEET coaching classes for Class 11-12",
+        "budget": 25000,
+        "city": "Chennai",
+        "audience_age": "15-19",
+        "audience_notes": "Students and parents in Chennai. Parents decide; Tamil-medium friendly.",
+        "goal": "leads",
+        "language": "Tamil",
+        "price": 18000,
+        "margin": 50
+      }
+    },
+    {
+      "id": "chn-tailor",
+      "label": "Tailoring shop · Chennai",
+      "input": {
+        "domain": "",
+        "product_name": "Ladies tailoring and alterations, Mylapore",
+        "budget": 2000,
+        "city": "Chennai",
+        "audience_age": "25-55",
+        "audience_notes": "Working women and homemakers nearby. Local area only.",
+        "goal": "awareness",
+        "language": "English"
+      }
+    },
+    {
+      "id": "blr-payroll",
+      "label": "Payroll SaaS · Bengaluru",
+      "input": {
+        "domain": "",
+        "product_name": "Payroll and HR software for Indian startups",
+        "budget": 60000,
+        "city": "Bengaluru",
+        "audience_age": "26-45",
+        "audience_notes": "HR managers and founders at 20-300 person startups. B2B software buyers.",
+        "goal": "leads",
+        "language": "English",
+        "price": 24000,
+        "margin": 80
+      }
+    },
+    {
+      "id": "blr-cloud-kitchen",
+      "label": "Cloud kitchen · Bengaluru",
+      "input": {
+        "domain": "",
+        "product_name": "Healthy millet bowls cloud kitchen, HSR Layout",
+        "budget": 8000,
+        "city": "Bengaluru",
+        "audience_age": "22-35",
+        "audience_notes": "Young professionals ordering lunch on Swiggy and Zomato near HSR and Koramangala.",
+        "goal": "sales",
+        "language": "English",
+        "price": 180,
+        "margin": 35
+      }
+    },
+    {
+      "id": "blr-thrift-app",
+      "label": "Thrift fashion app · Bengaluru",
+      "input": {
+        "domain": "",
+        "product_name": "Thrift fashion resale app",
+        "budget": 30000,
+        "city": "Bengaluru",
+        "audience_age": "18-28",
+        "audience_notes": "Gen Z college students and young professionals who buy pre-loved fashion.",
+        "goal": "app_installs",
+        "language": "English"
+      }
+    },
+    {
+      "id": "blr-bootcamp",
+      "label": "Coding bootcamp · Bengaluru",
+      "input": {
+        "domain": "",
+        "product_name": "Full-stack coding bootcamp with placement support",
+        "budget": 100000,
+        "city": "Bengaluru",
+        "audience_age": "21-30",
+        "audience_notes": "Graduates and early-career engineers switching to software jobs.",
+        "goal": "leads",
+        "language": "English",
+        "price": 45000,
+        "margin": 60
+      }
+    },
+    {
+      "id": "del-kurta",
+      "label": "Block-print kurtas · Delhi",
+      "input": {
+        "domain": "kalamkari-threads.example",
+        "product_name": "Kalamkari Threads hand-block printed kurtas",
+        "budget": 12000,
+        "city": "Delhi",
+        "audience_age": "24-45",
+        "audience_notes": "Women who like handloom and ethnic wear. Online orders across India.",
+        "goal": "sales",
+        "language": "Hindi",
+        "price": 1299,
+        "margin": 45
+      }
+    },
+    {
+      "id": "del-ias",
+      "label": "IAS coaching · Delhi",
+      "input": {
+        "domain": "",
+        "product_name": "UPSC civil services coaching, Mukherjee Nagar",
+        "budget": 50000,
+        "city": "Delhi",
+        "audience_age": "21-30",
+        "audience_notes": "UPSC aspirants in Delhi and Hindi-belt states. Hindi-medium batches.",
+        "goal": "awareness",
+        "language": "Hindi"
+      }
+    },
+    {
+      "id": "del-ac-repair",
+      "label": "AC repair · Delhi",
+      "input": {
+        "domain": "",
+        "product_name": "AC repair and servicing at home",
+        "budget": 5000,
+        "city": "Delhi",
+        "audience_age": "28-55",
+        "audience_notes": "Homeowners in South and West Delhi. Summer demand, nearby area only.",
+        "goal": "leads",
+        "language": "Hindi",
+        "price": 600,
+        "margin": 50
+      }
+    },
+    {
+      "id": "del-mithai",
+      "label": "Sweet shop · Delhi",
+      "input": {
+        "domain": "",
+        "product_name": "Halwai sweet shop, Chandni Chowk",
+        "budget": 20000,
+        "city": "Delhi",
+        "audience_age": "25-60",
+        "audience_notes": "Families buying mithai for festivals and gifting. Local walk-ins.",
+        "goal": "store_visits",
+        "language": "Hindi",
+        "price": 400,
+        "margin": 35
+      }
+    },
+    {
+      "id": "mum-analytics",
+      "label": "Analytics SaaS · Mumbai",
+      "input": {
+        "domain": "",
+        "product_name": "Retail analytics SaaS for D2C brands",
+        "budget": 80000,
+        "city": "Mumbai",
+        "audience_age": "28-45",
+        "audience_notes": "Founders, growth heads and analysts at D2C brands. Professional buyers.",
+        "goal": "b2b",
+        "language": "English",
+        "price": 150000,
+        "margin": 75
+      }
+    },
+    {
+      "id": "mum-streetwear",
+      "label": "Streetwear · Mumbai",
+      "input": {
+        "domain": "",
+        "product_name": "Oversized graphic tees streetwear label",
+        "budget": 1000,
+        "city": "Mumbai",
+        "audience_age": "18-25",
+        "audience_notes": "College students in Mumbai suburbs. Instagram-first, price sensitive.",
+        "goal": "sales",
+        "language": "Hindi",
+        "price": 899,
+        "margin": 50
+      }
+    },
+    {
+      "id": "mum-pet-grooming",
+      "label": "Pet grooming · Mumbai",
+      "input": {
+        "domain": "",
+        "product_name": "Pet grooming salon, Andheri West",
+        "budget": 7000,
+        "city": "Mumbai",
+        "audience_age": "25-45",
+        "audience_notes": "Pet parents in Andheri and Juhu. Local area.",
+        "goal": "store_visits",
+        "language": "English"
+      }
+    },
+    {
+      "id": "mum-vada-pav",
+      "label": "Vada pav stall · Mumbai",
+      "input": {
+        "domain": "",
+        "product_name": "Vada pav and chai stall near Dadar station",
+        "budget": 4000,
+        "city": "Mumbai",
+        "audience_age": "18-40",
+        "audience_notes": "Commuters and office goers around Dadar. Local.",
+        "goal": "awareness",
+        "language": "Hindi"
+      }
+    },
+    {
+      "id": "cbe-salon",
+      "label": "Unisex salon · Coimbatore",
+      "input": {
+        "domain": "glow-salon.example",
+        "product_name": "Glow Unisex Salon, RS Puram",
+        "budget": 6000,
+        "city": "Coimbatore",
+        "audience_age": "20-40",
+        "audience_notes": "Women and men in RS Puram and Saibaba Colony. Local walk-ins and bridal bookings.",
+        "goal": "store_visits",
+        "language": "Tamil",
+        "price": 800,
+        "margin": 60
+      }
+    },
+    {
+      "id": "cbe-silk",
+      "label": "Silk sarees · Coimbatore",
+      "input": {
+        "domain": "",
+        "product_name": "Kanchipuram silk sarees showroom",
+        "budget": 18000,
+        "city": "Coimbatore",
+        "audience_age": "28-55",
+        "audience_notes": "Women shopping for weddings and festivals. Tamil-first.",
+        "goal": "sales",
+        "language": "Tamil",
+        "price": 3500,
+        "margin": 30
+      }
+    },
+    {
+      "id": "cbe-spoken-english",
+      "label": "Spoken English classes · Coimbatore",
+      "input": {
+        "domain": "",
+        "product_name": "Spoken English and interview skills classes",
+        "budget": 3500,
+        "city": "Coimbatore",
+        "audience_age": "18-30",
+        "audience_notes": "College students and job seekers. Tamil-medium background.",
+        "goal": "leads",
+        "language": "Tamil"
+      }
+    }
+  ]
+}

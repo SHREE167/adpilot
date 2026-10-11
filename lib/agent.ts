@@ -13,6 +13,7 @@ import {
   type PlanResult,
   type RealityCheck,
   type TraceMeta,
+  type ZeroRupeeItem,
 } from "./types";
 import { newPlanId } from "./format";
 import { rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
@@ -33,8 +34,16 @@ const BUDGET_MS = 14000;
  */
 export async function runAgent(
   input: PlanInput,
-  opts: { onEvent?: TraceListener } = {}
+  opts: {
+    onEvent?: TraceListener;
+    /**
+     * v1 path for the eval harness (F16): no enrichment and no v2 layers
+     * (season adjust, zero-rupee, reality check). The mix equals v1's.
+     */
+    baseline?: boolean;
+  } = {}
 ): Promise<PlanResult> {
+  const v2 = !opts.baseline;
   const trace = createTrace(Date.now, opts.onEvent);
   const remaining = () => BUDGET_MS - trace.elapsed();
 
@@ -58,19 +67,24 @@ export async function runAgent(
   }
 
   // Step 3: every source is optional, time-boxed and never throws.
-  const enrichment: EnrichmentBundle = await trace.span(
-    "enrich",
-    () =>
-      runEnrichment(
-        {
-          siteReadiness: () => buildReadiness(site, input),
-          calendar: () => buildCalendar(input, product.category),
-          localMarket: () => fetchLocalMarket(input, product),
-        },
-        (key, signal) => trace.signal(key, signal, "enrich")
-      ),
-    { meta: (b) => ({ sources: Object.keys(b).length }) }
-  );
+  let enrichment: EnrichmentBundle | undefined;
+  if (v2) {
+    enrichment = await trace.span(
+      "enrich",
+      () =>
+        runEnrichment(
+          {
+            siteReadiness: () => buildReadiness(site, input),
+            calendar: () => buildCalendar(input, product.category),
+            localMarket: () => fetchLocalMarket(input, product),
+          },
+          (key, signal) => trace.signal(key, signal, "enrich")
+        ),
+      { meta: (b) => ({ sources: Object.keys(b).length }) }
+    );
+  } else {
+    trace.skip("enrich", "baseline (v1)");
+  }
 
   const rateCard = await trace.span("rate_card", () => getRateCard(), {
     meta: (c) => ({ version: c.version }),
@@ -85,8 +99,8 @@ export async function runAgent(
   const season = await trace.span(
     "signal_adjust",
     (): SeasonAdjust | undefined => {
-      const cal = enrichment.calendar;
-      if (cal.status !== "ok" || !cal.data) return undefined;
+      const cal = enrichment?.calendar;
+      if (!cal || cal.status !== "ok" || !cal.data) return undefined;
       return {
         weekMultipliers: cal.data.weekMultipliers,
         weekFestivals: cal.data.weekFestivals,
@@ -95,17 +109,23 @@ export async function runAgent(
     { meta: (s) => ({ seasonFactor: Math.round(seasonFactor(s) * 1000) / 1000 }) }
   );
   // F10: free actions before the paid mix, ranked from signals + brief.
-  const zeroRupee = await trace.span(
-    "zero_rupee",
-    () =>
-      buildZeroRupee({
-        input,
-        category: product.category,
-        readiness: enrichment.siteReadiness,
-        localMarket: enrichment.localMarket,
-      }),
-    { meta: (z) => ({ items: z.length, ...(z[0] ? { first: z[0].id } : {}) }) }
-  );
+  let zeroRupee: ZeroRupeeItem[] | undefined;
+  if (enrichment) {
+    const signals = enrichment;
+    zeroRupee = await trace.span(
+      "zero_rupee",
+      () =>
+        buildZeroRupee({
+          input,
+          category: product.category,
+          readiness: signals.siteReadiness,
+          localMarket: signals.localMarket,
+        }),
+      { meta: (z) => ({ items: z.length, ...(z[0] ? { first: z[0].id } : {}) }) }
+    );
+  } else {
+    trace.skip("zero_rupee", "baseline (v1)");
+  }
   const mix = await trace.span(
     "allocate",
     () => allocateBudget(input, scores, rateCard, product.priceTier, season),
@@ -118,7 +138,7 @@ export async function runAgent(
   );
   // Step 8 (F8): break-even verdict, only when the brief has price + margin.
   let realityCheck: RealityCheck | undefined;
-  if (hasRealityInputs(input)) {
+  if (v2 && hasRealityInputs(input)) {
     realityCheck = await trace.span(
       "reality_check",
       () => {
@@ -131,7 +151,7 @@ export async function runAgent(
       { meta: (r): TraceMeta => (r ? { verdict: r.verdict, breakEvenUnits: r.breakEvenUnits } : { verdict: "none" }) }
     );
   } else {
-    trace.skip("reality_check", "no price/margin");
+    trace.skip("reality_check", v2 ? "no price/margin" : "baseline (v1)");
   }
   const templates = await trace.span("copy_template", () =>
     templateCreative(input, mix, product.category, product.priceTier, product)
@@ -187,8 +207,8 @@ export async function runAgent(
     agentMs: planTrace.totalMs,
     scorer: "xgboost",
     planVersion: 2,
-    enrichment,
-    zeroRupee,
+    ...(enrichment ? { enrichment } : {}),
+    ...(zeroRupee ? { zeroRupee } : {}),
     ...(realityCheck ? { realityCheck } : {}),
     trace: planTrace,
   };

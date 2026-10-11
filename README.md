@@ -80,6 +80,7 @@ What M2 adds:
 What M3 adds:
 
 - **Can this pay for itself? (reality check)**: two optional form fields, price of one sale (₹) and margin %. AdPilot works out `breakEvenUnits = ceil(budget / (price × margin))` and `requiredCvr = units / forecast clicks`, then compares that to a per-goal band in `data/benchmarks.json` (ESTIMATE, editable). The verdict is **Healthy** (at or under typical), **Tight** (up to 2× typical) or **Likely loss** (more than 2×). Tight and Likely loss suggest a smaller first test and link to the free actions. Leave the fields empty and the check is skipped; it never blocks the plan.
+- **Eval harness v0** (`npm run eval`): runs 20 golden briefs (`eval/golden-briefs.json`) through the v1 path (`runAgent(input, { baseline: true })`, no enrichment) and through v2, in mock mode with no keys and no network. It writes `eval/report.md` with the date, git hash and a v1 vs v2 table covering specificity (grounded facts per plan), diversity (mean Jaccard distance of mixes), the ₹3k student vs ₹40k B2B signature check, reality coverage, explanation additivity and latency p50/p95. It exits non-zero if a mix does not sum to its budget or the signature briefs collapse to the same mix.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 
@@ -262,5 +263,6 @@ npm run build    # production build
 npm run start    # serve the build
 npm run lint
 npm test         # node:test unit tests (no extra deps)
+npm run eval     # v1 vs v2 on 20 golden briefs (mock mode) → eval/report.md
 npm run train-model   # retrain XGBoost (needs ml/.venv)
 ```
