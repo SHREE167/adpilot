@@ -71,6 +71,10 @@ export function groundedFacts(plan: PlanResult): string[] {
     for (const t of lm.data.top) facts.push(`places: ${t.name}`);
     facts.push(`places: own listing ${lm.data.own.found ? "found" : "missing"}`);
   }
+  const cr = e?.creators;
+  if (cr?.status === "ok" && cr.data && city && cr.data.query.toLowerCase().includes(city)) {
+    for (const c of cr.data.picks) facts.push(`creator: ${c.title}`);
+  }
   for (const z of plan.zeroRupee || []) {
     if (z.sources.length) facts.push(`zero-rupee: ${z.id}`);
   }

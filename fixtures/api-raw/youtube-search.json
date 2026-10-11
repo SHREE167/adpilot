@@ -1,0 +1,213 @@
+{
+  "query": {
+    "q": "food Chennai",
+    "topic": "food",
+    "language": "ta",
+    "city": "Chennai"
+  },
+  "recordedAt": "2026-10-11T05:27:50.048Z",
+  "response": {
+    "items": [
+      {
+        "id": {
+          "channelId": "UCv6idTdnVfb447EFhFXU2PA"
+        },
+        "snippet": {
+          "title": "CHENNAI FOOD"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCk3JZr7eS3pg5AGEvBdEvFg"
+        },
+        "snippet": {
+          "title": "Village Cooking Channel"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC38JZK621CB72vNumXpYdmw"
+        },
+        "snippet": {
+          "title": "food Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC9XEqLinkZwdbT8jpz9oqgw"
+        },
+        "snippet": {
+          "title": "Chennai Food community"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCMfUWnkREwSBqWNkP_Ug5fg"
+        },
+        "snippet": {
+          "title": "Chennai Food Machine"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCzsvccfmoK148PRfW2KffKA"
+        },
+        "snippet": {
+          "title": "Chennai Food Factory"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCynGX2z3IGRaN4gB6EFoKEg"
+        },
+        "snippet": {
+          "title": "Chennai Street Food "
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCDw0JsddfVX8D68lAOrlIWA"
+        },
+        "snippet": {
+          "title": "food chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCqh8qJcoj6wo1cqAdquhZYw"
+        },
+        "snippet": {
+          "title": "Chennai Food Slice"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCw8V9pKPQO1GJ-W59DfjfcA"
+        },
+        "snippet": {
+          "title": "chennai food court"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCBhVGaGbWbqFSREKqiVhcnQ"
+        },
+        "snippet": {
+          "title": "Food Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC0_SrJRdNGxPdXMRFOonU9Q"
+        },
+        "snippet": {
+          "title": "The Chennai Foodie (Nisha Nivedha)"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC96R8XceMgKbqe95GfHbtEw"
+        },
+        "snippet": {
+          "title": "FOOD KING CHENNAI"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCxMu1yJD1MsaMug3QK9XAQA"
+        },
+        "snippet": {
+          "title": "Food Of Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC8mZCaldXLwSaov7BMV5kEw"
+        },
+        "snippet": {
+          "title": "Street Food Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCD_oljlC0iT4nvHq7SxEd_w"
+        },
+        "snippet": {
+          "title": "FOOD  CHENNAI"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UC13HrxApGL_0psrC4uvbeRQ"
+        },
+        "snippet": {
+          "title": "Food reviews in chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UClaPk0RgykzO6j7Vadp_8eQ"
+        },
+        "snippet": {
+          "title": "Chennai Food Walks"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCZVABW7nRhVPNNqSMBvhr8A"
+        },
+        "snippet": {
+          "title": "Exotic Food Company - T Nagar, Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCF_pJNmW5Vn5DbnKPN8pqDQ"
+        },
+        "snippet": {
+          "title": "Bengali Food Chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCPSd3_qIR35eeF-LSxjvfUQ"
+        },
+        "snippet": {
+          "title": "Chennai Food Critique"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCsaIes_3P2Dsa89w9k0OZhA"
+        },
+        "snippet": {
+          "title": "Rajni food chennai Rajni food chennai"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCJeNMK40KAopoj8LPZoU7Sw"
+        },
+        "snippet": {
+          "title": "Chennai Food Insider"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCJ8qmCU86fW5ozY6Br7hAtQ"
+        },
+        "snippet": {
+          "title": "Mini's Chennai Street Food"
+        }
+      },
+      {
+        "id": {
+          "channelId": "UCwilkWqrxxyb3quhseHNFHw"
+        },
+        "snippet": {
+          "title": "CHENNAI FOOD LOCATION "
+        }
+      }
+    ]
+  }
+}

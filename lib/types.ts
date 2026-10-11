@@ -405,6 +405,38 @@ export interface LocalMarket {
   };
 }
 
+/** F5: one public YouTube channel (no personal data; channel stats only). */
+export interface CreatorPick {
+  channelId: string;
+  title: string;
+  url: string;
+  subscribers: number;
+  videos: number;
+  views: number;
+  /** Channel country as set by the creator, when public. */
+  country?: string;
+  /** Channel title/description names the brief's city. */
+  cityMatch: boolean;
+  /** 0-100 ranking score (heuristic, ESTIMATE). */
+  fit: number;
+  /** Facts behind the pick, each from the API response. */
+  why: string[];
+}
+
+/** F5: "{topic} {city}" channel search → 2k-200k subscribers → top 5 by fit. */
+export interface CreatorFinder {
+  /** The exact search.list q sent. */
+  query: string;
+  topic: string;
+  /** relevanceLanguage, e.g. "ta". */
+  language: string;
+  /** Channels search.list returned. */
+  found: number;
+  /** Of those, how many had 2k-200k public subscribers. */
+  inBand: number;
+  picks: CreatorPick[];
+}
+
 export type ZeroRupeeId =
   | "gbp"
   | "gbp_reviews"
@@ -432,7 +464,7 @@ export interface EnrichmentBundle {
   pageSpeed?: Signal<PageSpeedResult>;
   localMarket?: Signal<LocalMarket>;
   audience?: Signal<unknown>;
-  creators?: Signal<unknown>;
+  creators?: Signal<CreatorFinder>;
   searchDemand?: Signal<unknown>;
 }
 

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
 import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
+import { CreatorsCard } from "@/components/CreatorsCard";
 import { CountUp, StoryScene } from "@/components/Motion";
 import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { PlanHealth } from "@/components/PlanHealth";
@@ -94,6 +95,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const calendar = plan.enrichment?.calendar;
   const localMarket = plan.enrichment?.localMarket;
   const showLocal = showLocalMarket(localMarket);
+  const creators = plan.enrichment?.creators;
   const zeroRupee = plan.zeroRupee || [];
   const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const reality = plan.realityCheck;
@@ -104,6 +106,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
     plan.product ? "read" : null,
     readiness ? "ready" : null,
     showLocal ? "local" : null,
+    creators ? "voices" : null,
     zeroRupee.length ? "free" : null,
     calendar ? "timing" : null,
     "numbers",
@@ -235,6 +238,13 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         <StoryScene id="local" className="story-chapter">
           <Chapter {...chapter("local")} title="Your street" />
           <LocalMarketCard signal={localMarket} city={plan.input.city} />
+        </StoryScene>
+      ) : null}
+
+      {creators ? (
+        <StoryScene id="voices" className="story-chapter">
+          <Chapter {...chapter("voices")} title="Local voices" />
+          <CreatorsCard signal={creators} city={plan.input.city} />
         </StoryScene>
       ) : null}
 

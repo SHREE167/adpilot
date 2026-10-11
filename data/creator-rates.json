@@ -1,0 +1,9 @@
+{
+  "note": "F5 collab cost bands per integrated Short/video, INR. ESTIMATE from public Indian creator rate cards; not quotes. Edit freely; refined later by real results.",
+  "verified": false,
+  "bands": [
+    { "id": "nano", "label": "Nano", "minSubs": 2000, "maxSubs": 10000, "low": 1000, "high": 5000, "barter": true },
+    { "id": "micro", "label": "Micro", "minSubs": 10000, "maxSubs": 50000, "low": 5000, "high": 20000, "barter": true },
+    { "id": "mid", "label": "Mid-tier", "minSubs": 50000, "maxSubs": 200000, "low": 20000, "high": 75000, "barter": false }
+  ]
+}

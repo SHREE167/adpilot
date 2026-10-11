@@ -55,7 +55,7 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | M1 | Enrichment framework (Signal, timeouts, cache, mock mode), agent trace, LIVE/ESTIMATE badges, site readiness (tracking + funnel), festival calendar | done |
 | M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
 | M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | done |
-| M4 | Meta reach, YouTube creators, launch kit + grounding guard | |
+| M4 | Meta reach, YouTube creators, launch kit + grounding guard | in progress |
 | M5 | Budget slider, forecast ranges | |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
 | M7 | Ad previews, share/print, trace page | |
@@ -83,6 +83,12 @@ What M3 adds:
 - **Why this channel? (exact TreeSHAP)**: each channel in the mix has a collapsible waterfall. It starts at the average score, shows the top 5 drivers ("Audience age ~21 +6.2", "Not a SaaS brand −3.1"), then the other features combined, and ends at the model score. Values come from exact TreeSHAP (Lundberg et al. 2018, Algorithm 2) in `lib/ml/shap.ts`, using per-node cover exported by `ml/train.py`; they add up to the score exactly. The waterfall says plainly that the model was trained on synthetic briefs, so it explains the model, not the market.
 - **Eval harness v0** (`npm run eval`): runs 20 golden briefs (`eval/golden-briefs.json`) through the v1 path (`runAgent(input, { baseline: true })`, no enrichment) and through v2, in mock mode with no keys and no network. It writes `eval/report.md` with the date, git hash and a v1 vs v2 table covering specificity (grounded facts per plan), diversity (mean Jaccard distance of mixes), the ₹3k student vs ₹40k B2B signature check, reality coverage, explanation additivity and latency p50/p95. It exits non-zero if a mix does not sum to its budget or the signature briefs collapse to the same mix.
 
+What M4 adds:
+
+- **Category fix**: the product category is what the business sells, not who buys it. Product name and page title outweigh the audience notes, buyer words ("college students", "parents") are ignored, and text after " for " in the product name counts as audience. The eval reports category accuracy against hand labels.
+- **Local voices (YouTube)**: one `search.list` (type=channel, "{topic} {city}", regionCode=IN, relevanceLanguage from the form) and one `channels.list` per plan, cached 7 days. Keeps 2k to 200k public subscribers and ranks by city mention, topic, language and size. Each creator shows a link, why they fit and a collab cost band from `data/creator-rates.json` (ESTIMATE). YouTube only: AdPilot does not search Instagram creators. Needs `YOUTUBE_API_KEY`.
+- `npm run record -- <youtube|groq|meta>` makes one real call with the keys in `.env.local` and saves the response as a mock fixture (prints status and counts only, never keys).
+
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 
 ## Vercel env vars
@@ -97,6 +103,7 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 | `POSTGRES_URL` | No | Persist plans + rate card across serverless instances; also the `adpilot_cache` table for v2 data sources |
 | `PAGESPEED_API_KEY` | No | Mobile speed score + LCP in "Ready to spend?" (deferred after render, cached 24h). Restrict the key to the PageSpeed Insights API |
 | `GOOGLE_PLACES_API_KEY` | No | Local market scan: competitors for "{keyword} in {city}" + whether the business is on Google Maps (2 Text Search calls, 7-day cache, strict field masks). Restrict the key to Places API (New); set a daily quota and budget alert |
+| `YOUTUBE_API_KEY` | No | Local voices: up to 5 YouTube channels for "{topic} {city}" with 2k-200k subscribers (search.list 100 units + channels.list 1 unit per uncached plan, 7-day cache). Restrict the key to YouTube Data API v3 |
 | `ADPILOT_MOCK_APIS` | No | `1` = data sources read `fixtures/api/` instead of live APIs (local/demo/tests) |
 
 Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.

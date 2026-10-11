@@ -1,3 +1,4 @@
+import { costBand } from "./creator-rates";
 import { compactNumber, ctrPct, inr } from "./format";
 import type { PlanResult } from "./types";
 
@@ -47,6 +48,19 @@ export function planToMarkdown(plan: PlanResult): string {
     lines.push(`- ${rc.headline} ${rc.detail}`);
     lines.push(`- Price ${inr(rc.price)} × margin ${rc.marginPct}% = ${inr(rc.profitPerSale)} profit per sale; ${compactNumber(rc.clicks)} forecast clicks.`);
     lines.push(`- ${rc.advice}`);
+    lines.push("");
+  }
+  const cr = plan.enrichment?.creators;
+  if (cr?.status === "ok" && cr.data?.picks.length) {
+    lines.push(`## Local voices (YouTube${cr.mock ? ", MOCK" : ""})`);
+    lines.push("");
+    lines.push(`Search "${cr.data.query}": ${cr.data.inBand} of ${cr.data.found} channels have 2k-200k subscribers.`);
+    lines.push("");
+    for (const c of cr.data.picks) {
+      const band = costBand(c.subscribers);
+      const cost = band ? ` Collab ${inr(band.low)}-${inr(band.high)} per video (ESTIMATE).` : "";
+      lines.push(`- [${c.title}](${c.url}): ${c.why.join(". ")}.${cost}`);
+    }
     lines.push("");
   }
   lines.push("## Forecast totals (ESTIMATE)");

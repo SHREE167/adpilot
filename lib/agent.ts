@@ -3,6 +3,7 @@ import { allocateBudget } from "./allocate";
 import { templateCreative } from "./copy-templates";
 import { buildCalendar } from "./enrich/calendar";
 import { fetchLocalMarket } from "./enrich/places";
+import { fetchCreators } from "./enrich/youtube-creators";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
 import { buildRealityCheck, hasRealityInputs } from "./reality-check";
@@ -78,6 +79,7 @@ export async function runAgent(
             siteReadiness: () => buildReadiness(site, input),
             calendar: () => buildCalendar(input, product.category),
             localMarket: () => fetchLocalMarket(input, product),
+            creators: () => fetchCreators(input, product),
           },
           (key, signal) => trace.signal(key, signal, "enrich")
         ),

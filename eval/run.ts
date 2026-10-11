@@ -221,7 +221,7 @@ ${perBrief}
 
 - **v1** is \`runAgent(input, { baseline: true })\`: no enrichment step, no season adjust, no zero-rupee layer, no reality check. Its mix is the v1 mix.
 - **Category accuracy** compares the recognized category (heuristic only here; no LLM in eval) with each brief's hand-labelled \`expectedCategory\`: what the business sells, not who buys it. The labels were written alongside the M4 recognizer fix, so 100% here is a regression floor, not proof of generalisation.
-- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts (only when the query names the brief's city), zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
+- **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts and YouTube creators (each only when the query names the brief's city),zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
 - **Diversity** is the mean pairwise Jaccard distance between the channel sets of all briefs (0 = every plan picks the same channels, 1 = no overlap).
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is \`runAgent\` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
