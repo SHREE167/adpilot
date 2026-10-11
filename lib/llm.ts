@@ -34,8 +34,15 @@ export interface LlmProvider {
   model: string;
 }
 
-/** Groq first, Gemini as fallback. Keys from process.env only. No OpenAI. */
-export function llmProviders(): LlmProvider[] {
+/**
+ * Which provider goes first, per task: Gemini writes the launch-kit rewrite and ad
+ * copy (gpt-oss-20b echoed its input in every recording); Groq stays first for
+ * product recognition, which it handles fine.
+ */
+export type LlmOrder = "groq-first" | "gemini-first";
+
+/** Configured providers in the given order. Keys from process.env only. No OpenAI. */
+export function llmProviders(order: LlmOrder = "groq-first"): LlmProvider[] {
   const out: LlmProvider[] = [];
   const groq = process.env.GROQ_API_KEY;
   if (groq) {
@@ -58,7 +65,7 @@ export function llmProviders(): LlmProvider[] {
       model,
     });
   }
-  return out;
+  return order === "gemini-first" ? out.reverse() : out;
 }
 
 /** One provider call. Exported for the fixture recorder. Throws on HTTP/empty errors. */
@@ -89,9 +96,9 @@ export interface Generated<T> {
  */
 export async function generate<T>(
   prompt: string,
-  opts: { budgetMs: number; maxTokens: number; parse: (content: string) => T | null }
+  opts: { budgetMs: number; maxTokens: number; parse: (content: string) => T | null; order?: LlmOrder }
 ): Promise<Generated<T> | { failed: { provider: LlmProviderId; reason: string }[] } | null> {
-  const list = llmProviders();
+  const list = llmProviders(opts.order);
   if (!list.length) return null;
   const t0 = Date.now();
   const failed: { provider: LlmProviderId; reason: string }[] = [];
@@ -110,6 +117,7 @@ export async function generate<T>(
       const content = await callProvider(p, prompt, controller.signal, opts.maxTokens);
       const value = opts.parse(content);
       if (value === null || value === undefined) throw new Error("unusable JSON");
+      if (value instanceof EchoError) throw value;
       return { provider: p.provider, model: p.model, content, value, failed };
     } catch (err) {
       const reason = controller.signal.aborted ? "timeout" : err instanceof Error ? err.message.slice(0, 80) : "error";
@@ -390,6 +398,7 @@ export async function fillWithLlm(
 ): Promise<LlmResult & { fallback?: string }> {
   const r = await generate(buildPrompt(input, mix, intel, site), {
     budgetMs: COPY_BUDGET_MS,
+    order: "gemini-first",
     maxTokens: 3000,
     parse: (c) => {
       const parsed = extractJson(c);
@@ -461,38 +470,90 @@ export function asTexts(data: unknown, keys: string[]): Record<string, string> |
   return Object.keys(out).length ? out : null;
 }
 
-/** Recorded LLM response shape in fixtures/api/llm_launch_kit/<product>.json. */
+/** Recorded LLM response shape in fixtures/api/<source>/<product>.json. */
 export interface RecordedLlm {
   provider: string;
   model: string;
   content: string;
 }
 
+/** Recorded kit rewrites replayed in mock mode, per provider. */
+export const KIT_FIXTURE_SOURCE: Record<LlmProviderId, string> = {
+  google: "llm_gemini",
+  groq: KIT_LLM_SOURCE,
+};
+
+/** Share of unchanged lines at which a rewrite counts as an echo (a failure). */
+export const ECHO_SHARE = 0.8;
+
+class EchoError extends Error {}
+
+function sameLine(a: string, b: string): boolean {
+  const n = (s: string) => s.replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+  return n(a) === n(b);
+}
+
+/** Pure: how many reworded lines equal their input (hyphen/space/case-insensitive). */
+export function echoShare(input: Record<string, string>, output: Record<string, string>): number {
+  const keys = Object.keys(output).filter((k) => k in input);
+  if (!keys.length) return 0;
+  return keys.filter((k) => sameLine(input[k], output[k])).length / keys.length;
+}
+
 /**
- * F7: rewords the deterministic kit for tone (English only). Groq first, Gemini
- * on failure/timeout. Mock mode replays a recorded response for this product
- * (or keeps the template). Never throws.
+ * Parses a kit rewrite. Returns null when unusable and an EchoError when the
+ * model returned the lines (almost) unchanged, so generate() moves on.
+ */
+export function parseKitRewrite(
+  content: string,
+  input: Record<string, string>
+): Record<string, string> | EchoError | null {
+  const out = asTexts(extractJson(content), Object.keys(input));
+  if (!out) return null;
+  const share = echoShare(input, out);
+  if (share >= ECHO_SHARE) return new EchoError(`echo (${Math.round(share * 100)}% of lines unchanged)`);
+  return out;
+}
+
+/**
+ * F7: rewords the deterministic kit for tone (English only). Gemini first, Groq
+ * on failure, timeout or echo. Mock mode replays the recorded responses in the
+ * same order with the same rules (or keeps the template). Never throws.
  */
 export async function rewriteLaunchKit(
   texts: Record<string, string>,
   input: PlanInput,
   tone: string
 ): Promise<KitRewrite> {
-  const keys = Object.keys(texts);
   if (isMockMode()) {
-    const fx = await readFixture<RecordedLlm>(KIT_LLM_SOURCE, input.product_name);
-    if (!fx) return { used: false, provider: null, texts: null };
-    try {
-      const out = asTexts(extractJson(fx.data.content), keys);
-      return { used: Boolean(out), provider: fx.data.provider, texts: out, mock: true };
-    } catch {
-      return { used: false, provider: fx.data.provider, texts: null, mock: true };
+    const failed: string[] = [];
+    for (const id of ["google", "groq"] as const) {
+      const fx = await readFixture<RecordedLlm>(KIT_FIXTURE_SOURCE[id], input.product_name);
+      if (!fx) continue;
+      let parsed: Record<string, string> | EchoError | null = null;
+      try {
+        parsed = parseKitRewrite(fx.data.content, texts);
+      } catch {
+        parsed = null;
+      }
+      if (parsed && !(parsed instanceof EchoError)) {
+        return {
+          used: true,
+          provider: id,
+          texts: parsed,
+          mock: true,
+          ...(failed.length ? { fallback: failed.join("; ") } : {}),
+        };
+      }
+      failed.push(`${id}: ${parsed instanceof EchoError ? parsed.message : "unusable JSON"}`);
     }
+    return { used: false, provider: null, texts: null, ...(failed.length ? { mock: true, fallback: failed.join("; ") } : {}) };
   }
   const r = await generate(kitRewritePrompt(texts, input, tone), {
     budgetMs: KIT_BUDGET_MS,
     maxTokens: KIT_MAX_TOKENS,
-    parse: (c) => asTexts(extractJson(c), keys),
+    order: "gemini-first",
+    parse: (c) => parseKitRewrite(c, texts) as Record<string, string> | null,
   });
   if (!r) return { used: false, provider: null, texts: null };
   const note = failNote(r);

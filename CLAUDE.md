@@ -18,6 +18,7 @@ npx tsc --noEmit     # type check
 npm test             # node:test unit tests (scripts/run-tests.mjs, no deps)
 npm run eval         # F16: v1 vs v2 on eval/golden-briefs.json, mock mode → eval/report.md
 npm run train-model  # retrain XGBoost (needs ml/.venv with Python)
+npm run record -- <youtube|groq|gemini|meta>   # ONE live call -> mock fixture
 ```
 
 Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `fixtures/api/<source>/*.json` (fully offline).
@@ -38,8 +39,14 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/zero-rupee.ts`, `components/ZeroRupeeCard.tsx` | F10: pure rule ranking (readiness, Places, category, goal, budget) → up to 4 free actions with a `why`; `PlanResult.zeroRupee`. |
 | `lib/reality-check.ts`, `data/benchmarks.json`, `components/RealityCard.tsx` | F8: optional price + margin → break-even units, required CVR vs per-goal band (ESTIMATE) → Healthy / Tight / Likely loss; `PlanResult.realityCheck`. |
 | `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
+| `lib/enrich/youtube-creators.ts`, `lib/creator-rates.ts`, `data/creator-rates.json`, `components/CreatorsCard.tsx` | F5: one `search.list` + `channels.list` per plan (7d cache, key in header), 2k-200k subs, top 5 by fit; collab cost band (ESTIMATE). YouTube only. |
+| `lib/enrich/meta-reach.ts`, `components/AudienceCard.tsx` | F4: adgeolocation + adinterest search -> `act_{id}/reachestimate` bounds; FB/IG reach capped at the pool in signal_adjust (`capMetaReach`). Skipped until `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`; hand-written MOCK fixture until `npm run record -- meta`. |
+| `lib/launch-kit.ts`, `components/LaunchKit.tsx` | F7: deterministic per-channel kit from mix + signals (numbers only in structured fields); `guardKitTexts` reverts lines with untraceable numbers or non-English text. |
+| `lib/grounding-guard.ts` | F7: `extractNumbers` / `groundingSet` / `guardText` / `isEnglishText`. Runs on the kit rewrite and on all ad copy + outreach (`grounding_guard` trace span). |
+| `lib/llm.ts` | `generate()` with per-task order: kit rewrite + copy = Gemini first, Groq fallback; recognition = Groq first. Failure, timeout, unusable JSON or an echo (80%+ unchanged lines) moves to the next provider. English only; no OpenAI. |
+| `scripts/record-fixture.{mjs,ts}` | `npm run record -- <youtube|groq|gemini|meta>`: ONE real call with `.env.local` keys -> fixture. Prints counts only. |
 | `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |
-| `lib/recognize.ts`, `lib/llm.ts` | Heuristic product intel + optional LLM (Groq → OpenAI → Gemini). |
+| `lib/recognize.ts`, `lib/infer.ts` | Category = what is sold (weighted: product name/title > description > audience; buyer words ignored) + optional LLM refine. |
 | `lib/scoring.ts`, `lib/ml/infer.ts`, `lib/ml/features.ts` | XGBoost per channel (25 features, 12 channels) + policy rules. `explainScore()` returns the top TreeSHAP drivers; `assertModelSelfCheck()` also checks cover + SHAP additivity. |
 | `lib/ml/shap.ts`, `lib/ml/feature-labels.ts`, `components/ShapWaterfall.tsx` | F9: exact TreeSHAP (Lundberg 2018, Alg. 2), pure TS; human labels for the 25 features; "Why this channel?" waterfall; `PlanResult.shap`. |
 | `ml/train.py`, `ml/model.json` | Synthetic training; every node has `cover`. Python is blocked locally (Smart App Control): retrain in Colab (steps in the train.py docstring). |
@@ -63,6 +70,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 - No new npm dependency without asking. Prefer fetch + small helpers. Unit tests use `node:test` (built in).
 - UI: use the frontend-design skill; extend the existing glass/gold look; respect `prefers-reduced-motion`; mobile width first.
 - Every number in the UI is LIVE (source + date) or ESTIMATE. Never present an estimate as live data. Mock data is badged MOCK.
+- All plan text (kit, copy, outreach) is English. The form language is an audience hint only. No invented numbers in templates; use {{offer}}-style placeholders.
 - After each feature, `npm run lint`, `npx tsc --noEmit`, `npm run build` and `npm test` must all pass. One local commit per feature.
 - Keep the README roadmap and `.env.example` in sync with every new env var.
 

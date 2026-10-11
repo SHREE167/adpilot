@@ -7,7 +7,7 @@ import { runAgent } from "@/lib/agent";
 import { templateCreative } from "@/lib/copy-templates";
 import { groundingRate, groundingSet, guardText, isEnglishText } from "@/lib/grounding-guard";
 import { guardKitTexts, kitEvidence, kitTexts } from "@/lib/launch-kit";
-import { asTexts, extractJson, generate, llmProviders, rewriteLaunchKit } from "@/lib/llm";
+import { asTexts, ECHO_SHARE, echoShare, extractJson, generate, llmProviders, parseKitRewrite, rewriteLaunchKit } from "@/lib/llm";
 import type { PlanInput } from "@/lib/types";
 
 const BRIEFS = (golden as { briefs: { id: string; expectedCategory: string; input: PlanInput }[] }).briefs;
@@ -33,7 +33,7 @@ function hang(init?: RequestInit): Promise<Response> {
 }
 
 describe("LLM providers", () => {
-  it("Groq first, Gemini second; OpenAI is never used", () => {
+  it("default (recognition) is Groq first; kit/copy order is Gemini first; OpenAI is never used", () => {
     process.env.OPENAI_API_KEY = "sk-x";
     assert.deepEqual(llmProviders(), []);
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "g";
@@ -44,6 +44,10 @@ describe("LLM providers", () => {
         ["groq", "openai/gpt-oss-20b"],
         ["google", "gemini-3.5-flash-lite"],
       ]
+    );
+    assert.deepEqual(
+      llmProviders("gemini-first").map((p) => p.provider),
+      ["google", "groq"]
     );
   });
 
@@ -104,17 +108,83 @@ describe("generate: Groq → Gemini fallback", () => {
     assert.equal(r.failed.length, 2);
   });
 
-  it("rewriteLaunchKit uses Gemini when Groq fails and reports the fallback", async () => {
+  it("kit rewrite tries Gemini first; Groq only when Gemini fails", async () => {
     setBoth();
     const texts = { "whatsapp.metric": "Count chats, not likes." };
+    const calls: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      calls.push(String(url).includes("groq") ? "groq" : "google");
+      return String(url).includes("groq")
+        ? groqOk(JSON.stringify({ texts: { "whatsapp.metric": "Count the chats you get, not the likes." } }))
+        : new Response("{}", { status: 429 });
+    }) as typeof fetch;
+    const r = await rewriteLaunchKit(texts, SNACK.input, "plain");
+    assert.deepEqual(calls, ["google", "groq"]);
+    assert.equal(r.used, true);
+    assert.equal(r.provider, "groq");
+    assert.match(r.fallback || "", /google/);
+  });
+
+  it("an echo (lines returned unchanged) is a failure: Gemini echoes → Groq rewrites", async () => {
+    setBoth();
+    const texts = {
+      "whatsapp.metric": "Count chats, not likes.",
+      "whatsapp.checklist.0": "Set a greeting and quick replies.",
+    };
     globalThis.fetch = (async (url: string) =>
       String(url).includes("groq")
-        ? new Response("{}", { status: 429 })
-        : geminiOk(JSON.stringify({ texts: { "whatsapp.metric": "Count the chats you get, not the likes." } }))) as typeof fetch;
+        ? groqOk(JSON.stringify({ texts: { "whatsapp.metric": "Count the chats, not the likes.", "whatsapp.checklist.0": "Add a greeting and quick replies." } }))
+        : geminiOk(JSON.stringify({ texts: { "whatsapp.metric": "Count chats, not likes.", "whatsapp.checklist.0": "Set a greeting and quick replies." } }))) as typeof fetch;
     const r = await rewriteLaunchKit(texts, SNACK.input, "plain");
-    assert.equal(r.used, true);
-    assert.equal(r.provider, "google");
-    assert.match(r.fallback || "", /groq/);
+    assert.equal(r.provider, "groq");
+    assert.match(r.fallback || "", /google: echo \(100% of lines unchanged\)/);
+  });
+
+  it("both echo → template wording (used: false), reasons kept", async () => {
+    setBoth();
+    const texts = { "whatsapp.metric": "Count chats, not likes." };
+    const same = JSON.stringify({ texts });
+    globalThis.fetch = (async (url: string) => (String(url).includes("groq") ? groqOk(same) : geminiOk(same))) as typeof fetch;
+    const r = await rewriteLaunchKit(texts, SNACK.input, "plain");
+    assert.equal(r.used, false);
+    assert.match(r.fallback || "", /google: echo.*groq: echo/);
+  });
+});
+
+describe("echo detection", () => {
+  it("echoShare ignores hyphen style, spacing and case", () => {
+    const input = { a: "Fri-Sun, 6pm-10pm.", b: "Count chats." };
+    assert.equal(echoShare(input, { a: "Fri‑Sun,  6pm‑10pm.", b: "count chats." }), 1);
+    assert.equal(echoShare(input, { a: "Fri to Sun, 6pm-10pm.", b: "Count chats." }), 0.5);
+  });
+
+  it("parseKitRewrite: >= 80% unchanged is an echo; below is a rewrite", () => {
+    const input = { a: "one", b: "two", c: "three", d: "four", e: "five" };
+    const echo = parseKitRewrite(JSON.stringify({ texts: { ...input, e: "FIVE!" } }), input);
+    assert.ok(echo instanceof Error && /echo/.test(echo.message));
+    const ok = parseKitRewrite(JSON.stringify({ texts: { ...input, d: "4th", e: "5th" } }), input);
+    assert.ok(ok && !(ok instanceof Error));
+    assert.equal(ECHO_SHARE, 0.8);
+  });
+
+  it("the recorded gpt-oss-20b response is an echo of the text it was sent", () => {
+    const fx = JSON.parse(
+      readFileSync(path.join(process.cwd(), "fixtures", "api", "llm_launch_kit", "campus-crunch-masala-peanuts.json"), "utf8")
+    ) as { data: { content: string } };
+    const out = (JSON.parse(fx.data.content) as { texts: Record<string, string> }).texts;
+    // It was sent the older kit wording; compared with itself as input it is a 100% echo.
+    const input = Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.replace(/‑/g, "-")]));
+    assert.equal(echoShare(input, out), 1);
+  });
+});
+
+describe("mock replay order", () => {
+  it("replays Gemini first for the demo brief", async () => {
+    process.env.ADPILOT_MOCK_APIS = "1";
+    const plan = await runAgent(SNACK.input);
+    assert.equal(plan.launchKit!.wording, "google (recorded)");
+    const span = plan.trace!.spans.find((s) => s.name === "launch_kit_llm")!;
+    assert.equal(span.meta?.provider, "google");
   });
 });
 

@@ -129,9 +129,9 @@ describe("guardKitTexts (LLM rewrite)", () => {
 });
 
 describe("runAgent + guard", () => {
-  it("mock mode replays the recorded Groq rewrite for the demo brief, through the guard", async () => {
+  it("mock mode replays the recorded Gemini rewrite for the demo brief, through the guard", async () => {
     const plan = await mockPlan("sig-3k-student");
-    assert.match(plan.launchKit!.wording, /groq/);
+    assert.match(plan.launchKit!.wording, /google/);
     const span = plan.trace!.spans.find((s) => s.name === "grounding_guard")!;
     assert.equal(span.status, "ok");
     assert.ok(Number(span.meta?.checked) > 0);
