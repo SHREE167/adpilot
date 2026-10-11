@@ -60,7 +60,8 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `components/Dashboard.tsx` | Result view: centered hero + KPI tiles, centered section heads, paired `grid-2` cards (Midnight Pro theme, Geist + Geist Mono, anime.js fade-ups). |
 | `app/globals.css`, `lib/theme.ts`, `components/ThemeToggle.tsx` | Midnight Pro tokens (dark default, light via toggle), layout primitives (`.page`, `.story-chapter`, `.section-head`, `.hero`, `.grid-2/3`, `.kpi-grid`, `.tiles`, `.panel`); TS palette mirrors CSS (tests/theme.test.ts). |
 | `components/ProvenanceBadge.tsx`, `ReadinessCard.tsx`, `TimingCard.tsx`, `DataSources.tsx` | LIVE / ESTIMATE / Not connected badges and the v2 cards. |
-| `fixtures/` | Sample briefs, v1 plan snapshots, `fixtures/api/<source>/` mock fixtures. |
+| `fixtures/` | `fixtures/api/<source>/` mock fixtures and `fixtures/api-raw/` raw recordings. Sample briefs live in `lib/fixtures.ts`. |
+| `docs/` | Brief PDF, `ARCHITECTURE.md`, `DEMO.md` (5-min mock-mode demo), `REPORT-NOTES.md`, `PUSH-CHECKLIST.md`, `screenshots/`. |
 | `eval/run.ts`, `eval/metrics.ts`, `eval/golden-briefs.json`, `scripts/run-eval.mjs` | F16: `runAgent(input, {baseline: true})` = v1 path; specificity, diversity, signature, reality coverage, additivity, latency → `eval/report.md`. |
 | `tests/`, `scripts/` | node:test unit tests + a no-dependency TS test runner (resolve hooks). |
 
@@ -101,6 +102,6 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | M5 | F11 budget slider, F14 ranges (default band) — done | None | 2 days |
 | M6 | F12 critic, F13 actuals loop, F14 calibrated intervals, F20 explore slice, (F6) | #1 Postgres, #2 Groq, (#7 SerpAPI) | 4 days |
 | M7 | F17 ad previews, F18 share/print, F15 trace page UI | None | 2 days |
-| M8 | Eval v2 vs v1 report, fixtures, tests, README, demo script, report/PPT material | — | 2 days |
+| M8 | Eval v2 vs v1 report, fixtures, tests, README, demo script, report/PPT material — done (M6/M7 deferred as future work) | — | 2 days |
 
 Each milestone ships alone. Run one milestone per session.

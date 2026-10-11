@@ -22,7 +22,6 @@ import type {
 
 /** 11 points from 0.25x to 4x: factor 4^((i-5)/5), so i = 5 is exactly 1x. */
 export const GRID_POINTS = 11;
-export const MIN_FACTOR = 0.25;
 export const MAX_FACTOR = 4;
 
 export function gridBudgets(base: number, n = GRID_POINTS): { budget: number; factor: number }[] {
