@@ -28,7 +28,7 @@ function differentiators(input: PlanInput, site: SiteSnapshot): string[] {
   if (/premium|enterprise/i.test(blob)) found.push("premium / enterprise positioning");
   if (input.city) found.push(`city-local: ${input.city}`);
   if (input.language && !/^english$/i.test(input.language)) {
-    found.push(`${input.language}-first copy`);
+    found.push(`${input.language}-speaking audience`);
   }
   return found.slice(0, 5);
 }

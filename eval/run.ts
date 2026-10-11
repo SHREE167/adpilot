@@ -23,9 +23,9 @@ import {
   guardedTexts,
   kitText,
   meanPairwiseSimilarity,
-  templateCopyTexts,
+  copyTexts,
 } from "./metrics";
-import { groundingRate } from "@/lib/grounding-guard";
+import { groundingRate, isEnglishText } from "@/lib/grounding-guard";
 
 interface Brief {
   id: string;
@@ -80,7 +80,9 @@ interface Scores {
   hasKit: boolean;
   grounding: { grounded: number; total: number };
   guard: { checked: number; removed: number };
-  templateCopy: { grounded: number; total: number };
+  /** Copy + outreach numbers traceable (both variants share the template scripts). */
+  copy: { grounded: number; total: number };
+  english: { ok: number; total: number };
 }
 
 function score(runs: Run[], variant: Variant): Scores {
@@ -145,7 +147,7 @@ function score(runs: Run[], variant: Variant): Scores {
   };
 }
 
-function textScores(runs: Run[]): Pick<Scores, "textSimilarity" | "hasKit" | "grounding" | "guard" | "templateCopy"> {
+function textScores(runs: Run[]): Pick<Scores, "textSimilarity" | "hasKit" | "grounding" | "guard" | "copy" | "english"> {
   const hasKit = runs.some((r) => r.plan.launchKit);
   const texts = runs.map((r) =>
     hasKit
@@ -153,21 +155,26 @@ function textScores(runs: Run[]): Pick<Scores, "textSimilarity" | "hasKit" | "gr
       : [...r.plan.adAngles.map((a) => `${a.headline} ${a.primaryText}`), ...r.plan.outreach.map((o) => o.body)].join("\n")
   );
   const grounding = { grounded: 0, total: 0 };
-  const templateCopy = { grounded: 0, total: 0 };
+  const copy = { grounded: 0, total: 0 };
+  const english = { ok: 0, total: 0 };
   const guard = { checked: 0, removed: 0 };
   for (const r of runs) {
     const ev = planEvidence(r.plan);
     const g = groundingRate(guardedTexts(r.plan), ev);
     grounding.grounded += g.grounded;
     grounding.total += g.total;
-    const c = groundingRate(templateCopyTexts(r.plan), ev);
-    templateCopy.grounded += c.grounded;
-    templateCopy.total += c.total;
+    const c = groundingRate(copyTexts(r.plan), ev);
+    copy.grounded += c.grounded;
+    copy.total += c.total;
+    for (const t of guardedTexts(r.plan)) {
+      english.total++;
+      if (isEnglishText(t)) english.ok++;
+    }
     const span = r.plan.trace?.spans.find((s) => s.name === "grounding_guard" && s.status === "ok");
     guard.checked += Number(span?.meta?.checked ?? 0);
     guard.removed += Number(span?.meta?.removed ?? 0);
   }
-  return { textSimilarity: meanPairwiseSimilarity(texts), hasKit, grounding, guard, templateCopy };
+  return { textSimilarity: meanPairwiseSimilarity(texts), hasKit, grounding, guard, copy, english };
 }
 
 function git(cmd: string): string {
@@ -226,15 +233,20 @@ async function main() {
       s2.hasKit ? f2(s2.textSimilarity) : "—",
     ],
     [
-      "Grounding rate (numbers in kit + LLM text traceable)",
-      s1.grounding.total ? `${pctOf(s1.grounding.grounded, s1.grounding.total)}%` : "— (nothing generated)",
+      "Grounding rate (numbers in kit + copy + outreach traceable)",
+      `${pctOf(s1.grounding.grounded, s1.grounding.total)}% (${s1.grounding.grounded}/${s1.grounding.total})`,
       `${pctOf(s2.grounding.grounded, s2.grounding.total)}% (${s2.grounding.grounded}/${s2.grounding.total})`,
     ],
-    ["Guard: LLM numbers checked / removed", "— (no guard)", `${s2.guard.checked} / ${s2.guard.removed}`],
+    ["Guard: numbers checked / removed (kit rewrite + copy)", "— (no guard)", `${s2.guard.checked} / ${s2.guard.removed}`],
     [
-      "v1 template scripts: numbers traceable (not guarded)",
-      `${pctOf(s1.templateCopy.grounded, s1.templateCopy.total)}% (${s1.templateCopy.grounded}/${s1.templateCopy.total})`,
-      `${pctOf(s2.templateCopy.grounded, s2.templateCopy.total)}% (${s2.templateCopy.grounded}/${s2.templateCopy.total})`,
+      "Ad copy + outreach scripts: numbers traceable",
+      `${pctOf(s1.copy.grounded, s1.copy.total)}% (${s1.copy.grounded}/${s1.copy.total})`,
+      `${pctOf(s2.copy.grounded, s2.copy.total)}% (${s2.copy.grounded}/${s2.copy.total})`,
+    ],
+    [
+      "English-only lines (kit + copy + outreach)",
+      `${pctOf(s1.english.ok, s1.english.total)}% (${s1.english.ok}/${s1.english.total})`,
+      `${pctOf(s2.english.ok, s2.english.total)}% (${s2.english.ok}/${s2.english.total})`,
     ],
   ];
 
@@ -281,9 +293,10 @@ ${perBrief}
 - **Latency** is \`runAgent\` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
 - Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
-- **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from text the grounding guard is responsible for (the launch kit, plus LLM copy when an LLM wrote it) and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
-- **Guard: checked / removed** sums the \`grounding_guard\` trace span over plans whose words came from an LLM. In eval only the demo brief has one: a real Groq response recorded by \`npm run record -- groq\` and replayed offline.
-- **v1 template scripts** are v1's static ad angles and outreach examples. They contain illustrative offers ("10% off on 3+ packs") that no data supports; they are shown here, unguarded, so the gap is visible.
+- **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
+- **Guard: checked / removed** sums the \`grounding_guard\` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Groq response recorded by \`npm run record -- groq\` and replayed offline. A real Gemini response (\`npm run record -- gemini\`) is kept in \`fixtures/api/llm_gemini/\` for the fallback tests; it came back in Hinglish, which the English check rejects line by line.
+- **Ad copy + outreach scripts** are the template scripts (no LLM in eval). Since M4 they contain no invented offers or numbers: the owner fills \`{{offer}}\` / \`{{price}}\`. Before the fix they traced 74% in v1 (168/227) because of lines like "10% off on 3+ packs".
+- **English-only lines** checks every kit, copy and outreach line with \`isEnglishText\` (no Indic script, no Hinglish function words). The form's language describes the audience only.
 `;
 
   writeFileSync(path.join(process.cwd(), "eval", "report.md"), report);

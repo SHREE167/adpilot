@@ -198,3 +198,25 @@ export function groundingRate(texts: readonly string[], evidence: readonly numbe
   }
   return { grounded, total, rate: total ? grounded / total : 1 };
 }
+
+/** Any Indic script (Devanagari ... Malayalam). Plan text must be English. */
+const INDIC_SCRIPT = /[ऀ-ൿ]/;
+/** Hindi/Hinglish function words that do not occur in English sentences. */
+const HINGLISH = new Set(
+  "ke ki ka ko hai hain mein pe se aur karo kar karna kare wale wala wali walo jo yeh woh nahi mat rakhna rakho lena lo chalega pehle pehla ho jata jati logo gino padega hisaab sake bata lagbhag jinhe pasand ek bhi abhi sirf apna apne apni toh kya kaise".split(
+    " "
+  )
+);
+
+/**
+ * Pure: true when text reads as English. Fails on any Indic script, or when
+ * Hinglish function words make up at least 12% of the words (min 2 hits).
+ */
+export function isEnglishText(text: string): boolean {
+  if (!text) return true;
+  if (INDIC_SCRIPT.test(text)) return false;
+  const words = text.toLowerCase().match(/[a-z]+/g) || [];
+  if (!words.length) return true;
+  const hits = words.filter((w) => HINGLISH.has(w)).length;
+  return !(hits >= 2 && hits / words.length >= 0.12);
+}

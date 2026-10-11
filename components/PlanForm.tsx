@@ -268,7 +268,7 @@ export function PlanForm() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="language">Language</label>
+            <label htmlFor="language">Audience language</label>
             <select
               id="language"
               value={form.language}

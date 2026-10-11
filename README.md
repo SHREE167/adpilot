@@ -88,11 +88,11 @@ What M4 adds:
 - **Category fix**: the product category is what the business sells, not who buys it. Product name and page title outweigh the audience notes, buyer words ("college students", "parents") are ignored, and text after " for " in the product name counts as audience. The eval reports category accuracy against hand labels.
 - **Local voices (YouTube)**: one `search.list` (type=channel, "{topic} {city}", regionCode=IN, relevanceLanguage from the form) and one `channels.list` per plan, cached 7 days. Keeps 2k to 200k public subscribers and ranks by city mention, topic, language and size. Each creator shows a link, why they fit and a collab cost band from `data/creator-rates.json` (ESTIMATE). YouTube only: AdPilot does not search Instagram creators. Needs `YOUTUBE_API_KEY`.
 - **Who you can reach (Meta)**: resolves the city (`search?type=adgeolocation`), up to 3 interests from what is sold (`type=adinterest`, kept by id) and calls `act_{id}/reachestimate` for the monthly lower/upper bounds. The card shows the bounds and the exact `targeting_spec`. Facebook + Instagram forecast reach is capped at the pool (signal adjust; off = v1 numbers). Under-18 audiences get no interests (Meta allows only age + location for teens). We use `reachestimate` rather than `delivery_estimate`, whose DAU fields Meta removed in v26 (all versions from 27 Oct 2026). Needs `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`; until then it runs on a hand-written MOCK fixture in mock mode.
-- **Launch kit**: per channel in the mix, exact targeting (the Meta `targeting_spec` when the audience signal is live), days and times, creative count + format, search keywords, a first-week checklist and the one metric to watch. Built deterministically from the mix and the signals (pixel/GTM checks, WhatsApp funnel hint, Maps listing and top competitor, festival weeks, creators); every number in it sits in a structured field. With an LLM key it is reworded for tone in the brief's language (Groq first), and copy is never allowed to add numbers.
-- **Grounding guard** (`lib/grounding-guard.ts`): extracts every number from LLM text (₹, 1,00,000, K/L/Cr/M, %, 6-10pm, Devanagari/Tamil digits) and checks it against the plan's structured numbers and the signals at the precision shown. A kit line with an untraceable number falls back to its deterministic version; LLM ad copy loses the token. Every removal is logged in the `grounding_guard` trace span. Template copy (no key) still works.
+- **Launch kit**: per channel in the mix, exact targeting (the Meta `targeting_spec` when the audience signal is live), days and times, creative count + format, search keywords, a first-week checklist and the one metric to watch. Built deterministically from the mix and the signals (pixel/GTM checks, WhatsApp funnel hint, Maps listing and top competitor, festival weeks, creators); every number in it sits in a structured field. With an LLM key it is reworded for tone in plain English (Groq first, Gemini if Groq fails or times out), and copy is never allowed to add numbers. All plan text is English; the form's language only describes the audience (e.g. regional YouTube creators, ShareChat).
+- **Grounding guard** (`lib/grounding-guard.ts`): extracts every number from LLM text (₹, 1,00,000, K/L/Cr/M, %, 6-10pm, Devanagari/Tamil digits) and checks it against the plan's structured numbers and the signals at the precision shown. A kit line with an untraceable number falls back to its deterministic version; ad angles and outreach scripts (template or LLM) lose the token. The v1 template scripts no longer contain invented offers or numbers; the owner fills `{{offer}}` / `{{price}}`. Every removal is logged in the `grounding_guard` trace span. Template copy (no key) still works.
 - Groq default model is now `openai/gpt-oss-20b`: Groq moved the Llama models to its Enterprise tier, and free keys get HTTP 404 on `llama-3.1-8b-instant`. Override with `GROQ_MODEL`.
 - `npm run eval` adds category accuracy, launch-kit text similarity (lower = more specific) and grounding rate (target 100%).
-- `npm run record -- <youtube|groq|meta>` makes one real call with the keys in `.env.local` and saves the response as a mock fixture (prints status and counts only, never keys).
+- `npm run record -- <youtube|groq|gemini|meta>` makes one real call with the keys in `.env.local` and saves the response as a mock fixture (prints status and counts only, never keys).
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 
@@ -102,9 +102,8 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `GROQ_API_KEY` | No | LLM copy + launch-kit wording (checked first). Default model `openai/gpt-oss-20b` (`GROQ_MODEL` overrides) |
-| `OPENAI_API_KEY` | No | LLM copy if Groq is unset |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | No | LLM copy if Groq and OpenAI are unset |
+| `GROQ_API_KEY` | No | LLM copy + launch-kit wording, English only (tried first). Default model `openai/gpt-oss-20b` (`GROQ_MODEL` overrides) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | No | Gemini fallback when Groq is unset, fails or times out. Default model `gemini-3.5-flash-lite` (`GOOGLE_MODEL` overrides) |
 | `POSTGRES_URL` | No | Persist plans + rate card across serverless instances; also the `adpilot_cache` table for v2 data sources |
 | `PAGESPEED_API_KEY` | No | Mobile speed score + LCP in "Ready to spend?" (deferred after render, cached 24h). Restrict the key to the PageSpeed Insights API |
 | `GOOGLE_PLACES_API_KEY` | No | Local market scan: competitors for "{keyword} in {city}" + whether the business is on Google Maps (2 Text Search calls, 7-day cache, strict field masks). Restrict the key to Places API (New); set a daily quota and budget alert |
@@ -114,7 +113,7 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 | `META_API_VERSION` | No | Pinned Marketing API version, e.g. `v26.0` |
 | `ADPILOT_MOCK_APIS` | No | `1` = data sources read `fixtures/api/` instead of live APIs (local/demo/tests) |
 
-Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.
+Optional model overrides: `GROQ_MODEL`, `GOOGLE_MODEL`. OpenAI is not used.
 
 LLM calls happen **only** inside the server agent (`runAgent`). The browser never sees the key. There is no REST API wrapper around Meta or Google. The form calls one route, `POST /api/plan`, which runs the same `runAgent` as the `createPlan` Server Action and streams each pipeline step as NDJSON so the UI can show real progress (it falls back to the Server Action if the stream is unavailable).
 

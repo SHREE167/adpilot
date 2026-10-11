@@ -169,7 +169,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
         </h1>
         <p className="story-bit mt-8 max-w-2xl text-xl leading-relaxed text-fog sm:text-2xl">
           {inr(plan.input.budget)} a month · {plan.input.goal} · {plan.category}/
-          {plan.priceTier} · {plan.input.language}
+          {plan.priceTier} · {plan.input.language}-speaking audience
         </p>
         <div className="story-bit mt-10 flex flex-wrap gap-3">
           <EstimateBadge />

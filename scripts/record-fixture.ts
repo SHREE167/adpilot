@@ -17,7 +17,7 @@ import {
 import { fetchMetaRaw, interestSeeds, META_ENV, META_SOURCE, toAudienceEstimate } from "@/lib/enrich/meta-reach";
 import { runAgent } from "@/lib/agent";
 import { kitTexts } from "@/lib/launch-kit";
-import { callKitRewrite, KIT_LLM_SOURCE, kitRewritePrompt } from "@/lib/llm";
+import { asTexts, callProvider, extractJson, KIT_LLM_SOURCE, KIT_MAX_TOKENS, kitRewritePrompt, llmProviders, type LlmProviderId } from "@/lib/llm";
 import golden from "../eval/golden-briefs.json";
 import type { PlanInput } from "@/lib/types";
 
@@ -130,8 +130,13 @@ async function meta(): Promise<void> {
 }
 
 /** One real LLM call: the demo brief's launch kit reworded for tone (Groq first). */
-async function groq(): Promise<void> {
-  if (!need("GROQ_API_KEY")) return;
+/**
+ * One real LLM call on the demo brief's launch kit (English rewrite), forced to
+ * one provider so each key is verified on its own. Groq's response is the one
+ * mock mode replays; Gemini's goes to fixtures/api/llm_gemini/ (fallback path).
+ */
+async function llmRecord(id: LlmProviderId, envKey: string, label: string, source: string): Promise<void> {
+  if (!need(envKey)) return;
   // Build the demo plan offline (mock signals, no LLM), then make exactly one live call.
   const saved: Record<string, string | undefined> = {};
   for (const k of LLM_KEYS) {
@@ -142,24 +147,30 @@ async function groq(): Promise<void> {
   const plan = await runAgent(DEMO.input);
   process.env.ADPILOT_MOCK_APIS = "";
   for (const k of LLM_KEYS) if (saved[k]) process.env[k] = saved[k];
-  const texts = kitTexts(plan.launchKit!);
-  console.log(`Groq: rewrite ${Object.keys(texts).length} launch-kit lines in ${DEMO.input.language} (1 chat completion)`);
-  const res = await callKitRewrite(kitRewritePrompt(texts, DEMO.input, plan.product.tone), AbortSignal.timeout(20000));
-  if (!res || res.provider !== "groq") {
-    console.error("  no Groq response");
+  const provider = llmProviders().find((x) => x.provider === id);
+  if (!provider) {
+    console.error(`  ${label} is not configured`);
     process.exitCode = 1;
     return;
   }
-  console.log(`  HTTP 200, model ${res.model}, ${res.content.length} chars`);
-  write(`fixtures/api/${KIT_LLM_SOURCE}/${slug(DEMO.input.product_name)}.json`, {
+  const texts = kitTexts(plan.launchKit!);
+  console.log(`${label} (${provider.model}): rewrite ${Object.keys(texts).length} launch-kit lines in English (1 call)`);
+  const content = await callProvider(provider, kitRewritePrompt(texts, DEMO.input, plan.product.tone), AbortSignal.timeout(30000), KIT_MAX_TOKENS);
+  const parsed = asTexts(extractJson(content), Object.keys(texts));
+  const changed = parsed ? Object.entries(parsed).filter(([k, v]) => v !== texts[k]).length : 0;
+  console.log(`  OK, ${content.length} chars, ${parsed ? Object.keys(parsed).length : 0} lines parsed, ${changed} reworded`);
+  write(`fixtures/api/${source}/${slug(DEMO.input.product_name)}.json`, {
     fetchedAt: new Date().toISOString(),
-    data: { provider: res.provider, model: res.model, prompt: "kitRewritePrompt (lib/llm.ts)", content: res.content },
+    data: { provider: provider.provider, model: provider.model, prompt: "kitRewritePrompt (lib/llm.ts)", content },
   });
 }
 
-const LLM_KEYS = ["GROQ_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
+const groq = () => llmRecord("groq", "GROQ_API_KEY", "Groq", KIT_LLM_SOURCE);
+const gemini = () => llmRecord("google", "GOOGLE_GENERATIVE_AI_API_KEY", "Gemini", "llm_gemini");
 
-const SOURCES: Record<string, () => Promise<void>> = { youtube, meta, groq };
+const LLM_KEYS = ["GROQ_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"];
+
+const SOURCES: Record<string, () => Promise<void>> = { youtube, meta, groq, gemini };
 
 const which = process.argv[2];
 if (!which || !SOURCES[which]) {

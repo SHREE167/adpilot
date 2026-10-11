@@ -313,7 +313,7 @@ function checklistFor(row: ChannelAllocation, ctx: KitContext, used: Set<string>
     facebook: `Pin the ${thing} offer to the Page with the map pin and phone number for ${input.city}.`,
     whatsapp: `Set a greeting and quick replies for ${thing}: price, stock and where in ${input.city}.`,
     youtube: `Show ${thing} in hand in the first second; no logo intro.`,
-    sharechat: `Write the ${thing} caption in ${input.language}; keep English to the brand name.`,
+    sharechat: `ShareChat buyers here are ${input.language}-speaking: keep the ${thing} caption short and lead with the product shot.`,
     linkedin: `Use a lead form, not a landing page, for the first ${thing} test.`,
     telegram: `Ask admins of groups where ${who} gather before posting about ${thing}.`,
     reddit: `Write like a member, not an ad, when you mention ${thing}; answer every comment.`,
@@ -373,7 +373,7 @@ export function buildLaunchKit(ctx: KitContext): LaunchKit {
     };
   });
   return {
-    language: ctx.input.language,
+    language: "English",
     channels,
     wording: "template",
     guard: { checked: 0, removed: 0, samples: [] },
@@ -432,6 +432,8 @@ export interface KitGuardResult {
   kit: LaunchKit;
   checked: number;
   removed: string[];
+  /** Reworded lines rejected for not being English (reverted to the template line). */
+  nonEnglish: number;
 }
 
 /**
@@ -443,14 +445,21 @@ export function guardKitTexts(
   base: LaunchKit,
   reworded: Record<string, string>,
   evidence: readonly number[],
-  guard: (text: string, ev: readonly number[]) => { removed: string[]; checked: number }
+  guard: (text: string, ev: readonly number[]) => { removed: string[]; checked: number },
+  isEnglish: (text: string) => boolean = () => true
 ): KitGuardResult {
   const baseTexts = kitTexts(base);
   const safe: Record<string, string> = {};
   const removed: string[] = [];
   let checked = 0;
+  let nonEnglish = 0;
   for (const [k, v] of Object.entries(reworded)) {
     if (!(k in baseTexts)) continue;
+    if (!isEnglish(v)) {
+      nonEnglish++;
+      safe[k] = baseTexts[k];
+      continue;
+    }
     const r = guard(v, evidence);
     checked += r.checked;
     if (r.removed.length) {
@@ -460,5 +469,5 @@ export function guardKitTexts(
       safe[k] = v;
     }
   }
-  return { kit: applyKitTexts(base, safe), checked, removed };
+  return { kit: applyKitTexts(base, safe), checked, removed, nonEnglish };
 }

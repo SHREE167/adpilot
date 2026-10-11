@@ -23,7 +23,7 @@ import {
 import { newPlanId } from "./format";
 import { capMetaReach, rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
 import { fillWithLlm, mergeCreative, recognizeWithLlm, rewriteLaunchKit, type KitRewrite } from "./llm";
-import { groundingSet, guardText } from "./grounding-guard";
+import { groundingSet, guardText, isEnglishText } from "./grounding-guard";
 import { buildLaunchKit, guardKitTexts, kitEvidence, kitTexts } from "./launch-kit";
 import { mergeIntel, recognizeHeuristic } from "./recognize";
 import { getRateCard } from "./storage";
@@ -64,7 +64,7 @@ export async function runAgent(
 
   if (remaining() > 4000) {
     const rec = await trace.span("recognize_llm", () => recognizeWithLlm(input, site, product), {
-      meta: (r) => ({ used: r.used, provider: r.provider ?? "none" }),
+      meta: (r): TraceMeta => ({ used: r.used, provider: r.provider ?? "none", ...(r.fallback ? { fallback: r.fallback } : {}) }),
     });
     if (rec.product) {
       product = mergeIntel(product, rec.product);
@@ -217,11 +217,16 @@ export async function runAgent(
     const baseKit = launchKit;
     const [llm, rew] = await Promise.all([
       trace.span("copy_llm", () => fillWithLlm(input, mix, product, site), {
-        meta: (r) => ({ used: r.used, provider: r.provider ?? "none" }),
+        meta: (r): TraceMeta => ({ used: r.used, provider: r.provider ?? "none", ...(r.fallback ? { fallback: r.fallback } : {}) }),
       }),
       baseKit
         ? trace.span("launch_kit_llm", () => rewriteLaunchKit(kitTexts(baseKit), input, product.tone), {
-            meta: (r): TraceMeta => ({ used: r.used, provider: r.provider ?? "none", ...(r.mock ? { mock: true } : {}) }),
+            meta: (r): TraceMeta => ({
+              used: r.used,
+              provider: r.provider ?? "none",
+              ...(r.mock ? { mock: true } : {}),
+              ...(r.fallback ? { fallback: r.fallback } : {}),
+            }),
           })
         : Promise.resolve(null),
     ]);
@@ -249,27 +254,32 @@ export async function runAgent(
           kitBefore ? kitEvidence(kitBefore) : null
         );
         let checked = 0;
+        let nonEnglish = 0;
         const removed: string[] = [];
         let kit = kitBefore;
         if (kitBefore && kitRewrite?.texts) {
-          const r = guardKitTexts(kitBefore, kitRewrite.texts, evidence, guardText);
+          const r = guardKitTexts(kitBefore, kitRewrite.texts, evidence, guardText, isEnglishText);
           kit = r.kit;
           checked += r.checked;
+          nonEnglish += r.nonEnglish;
           removed.push(...r.removed);
         }
         let copy = creative;
-        if (llmUsed) {
-          const r = guardCreative(creative, mix, templates.explanations, evidence);
+        // Template and LLM copy alike: ad angles, outreach scripts and explanations.
+        {
+          const r = guardCreative(creative, mix, templates, evidence);
           copy = r.creative;
           checked += r.checked;
+          nonEnglish += r.nonEnglish;
           removed.push(...r.removed);
         }
-        return { kit, copy, checked, removed };
+        return { kit, copy, checked, removed, nonEnglish };
       },
       {
         meta: (g): TraceMeta => ({
           checked: g.checked,
           removed: g.removed.length,
+          ...(g.nonEnglish ? { nonEnglish: g.nonEnglish } : {}),
           ...(g.removed.length ? { samples: g.removed.slice(0, 5).join(" | ") } : {}),
         }),
       }
@@ -279,7 +289,12 @@ export async function runAgent(
       launchKit = {
         ...guarded.kit,
         wording: kitRewrite?.used && kitRewrite.provider ? kitRewrite.provider + (kitRewrite.mock ? " (recorded)" : "") : "template",
-        guard: { checked: guarded.checked, removed: guarded.removed.length, samples: guarded.removed.slice(0, 5) },
+        guard: {
+          checked: guarded.checked,
+          removed: guarded.removed.length,
+          samples: guarded.removed.slice(0, 5),
+          ...(guarded.nonEnglish ? { nonEnglish: guarded.nonEnglish } : {}),
+        },
       };
     }
   } else {
@@ -321,17 +336,26 @@ export async function runAgent(
 }
 
 /**
- * Guard LLM ad copy: explanations with an untraceable number fall back to the
- * template line; ad angles and outreach lose the offending number tokens.
+ * Guard ad copy and outreach scripts (template or LLM): explanations with an
+ * untraceable number fall back to the template line; ad angles and outreach
+ * lose the offending number tokens.
  */
 function guardCreative(
   creative: { mix: ChannelAllocation[]; adAngles: PlanResult["adAngles"]; outreach: PlanResult["outreach"] },
   mix: ChannelAllocation[],
-  templateExplanations: Record<string, string>,
+  templates: { explanations: Record<string, string>; adAngles: PlanResult["adAngles"]; outreach: PlanResult["outreach"] },
   evidence: readonly number[]
-): { creative: typeof creative; checked: number; removed: string[] } {
+): { creative: typeof creative; checked: number; removed: string[]; nonEnglish: number } {
   let checked = 0;
+  let nonEnglish = 0;
   const removed: string[] = [];
+  const templateExplanations = templates.explanations;
+  // English only: a non-English LLM item falls back to the template item in the same slot.
+  const english = <T>(item: T, texts: string[], fallback: T | undefined): T => {
+    if (texts.every(isEnglishText) || !fallback) return item;
+    nonEnglish++;
+    return fallback;
+  };
   const g = (text: string) => {
     const r = guardText(text, evidence);
     checked += r.checked;
@@ -339,17 +363,25 @@ function guardCreative(
     return r;
   };
   const nextMix = creative.mix.map((row) => {
+    if (!isEnglishText(row.explanation) && templateExplanations[row.channelId]) {
+      nonEnglish++;
+      return { ...row, explanation: templateExplanations[row.channelId] };
+    }
     const r = g(row.explanation);
     if (!r.removed.length) return row;
     const fallback = templateExplanations[row.channelId] ?? mix.find((m) => m.channelId === row.channelId)?.explanation ?? r.text;
     return { ...row, explanation: fallback };
   });
-  const adAngles = creative.adAngles.map((a) => ({
+  const adAngles = creative.adAngles
+    .map((a, i) => english(a, [a.headline, a.primaryText, a.cta], templates.adAngles[i]))
+    .map((a) => ({
     ...a,
     headline: g(a.headline).text,
     primaryText: g(a.primaryText).text,
     cta: g(a.cta).text,
   }));
-  const outreach = creative.outreach.map((o) => ({ ...o, title: g(o.title).text, body: g(o.body).text }));
-  return { creative: { mix: nextMix, adAngles, outreach }, checked, removed };
+  const outreach = creative.outreach
+    .map((o, i) => english(o, [o.title, o.body], templates.outreach[i]))
+    .map((o) => ({ ...o, title: g(o.title).text, body: g(o.body).text }));
+  return { creative: { mix: nextMix, adAngles, outreach }, checked, removed, nonEnglish };
 }

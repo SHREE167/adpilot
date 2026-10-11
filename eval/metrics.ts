@@ -149,22 +149,16 @@ export function kitText(plan: PlanResult): string {
   return plan.launchKit ? Object.values(kitTexts(plan.launchKit)).join("\n") : "";
 }
 
-/** Generated text the guard is responsible for: the kit, plus LLM copy when an LLM wrote it. */
-export function guardedTexts(plan: PlanResult): string[] {
-  const out = plan.launchKit ? Object.values(kitTexts(plan.launchKit)) : [];
-  if (plan.llmUsed) {
-    out.push(...plan.mix.map((m) => m.explanation));
-    for (const a of plan.adAngles) out.push(a.headline, a.primaryText, a.cta);
-    for (const o of plan.outreach) out.push(o.title, o.body);
-  }
-  return out;
-}
-
-/** v1 template ad angles + outreach + explanations (not LLM, not guarded): illustrative offers. */
-export function templateCopyTexts(plan: PlanResult): string[] {
-  if (plan.llmUsed) return [];
+/** Ad angles, outreach scripts and channel explanations (template or LLM). */
+export function copyTexts(plan: PlanResult): string[] {
   const out = plan.mix.map((m) => m.explanation);
   for (const a of plan.adAngles) out.push(a.headline, a.primaryText, a.cta);
   for (const o of plan.outreach) out.push(o.title, o.body);
   return out;
+}
+
+/** Text the grounding guard covers in v2: the launch kit + all copy and outreach. */
+export function guardedTexts(plan: PlanResult): string[] {
+  const kit = plan.launchKit ? Object.values(kitTexts(plan.launchKit)) : [];
+  return [...kit, ...copyTexts(plan)];
 }

@@ -529,10 +529,10 @@ export interface KitChannel {
 export interface LaunchKit {
   language: string;
   channels: KitChannel[];
-  /** Who wrote the words: "template" or the LLM provider ("groq", ...). */
+  /** Who wrote the words: "template" or the LLM provider ("groq", "google"). Always English. */
   wording: string;
   /** Grounding guard over every generated text in the plan (kit + LLM copy). */
-  guard: { checked: number; removed: number; samples: string[] };
+  guard: { checked: number; removed: number; samples: string[]; nonEnglish?: number };
 }
 
 /** Every optional data source result attached to a plan (brief section 3). */

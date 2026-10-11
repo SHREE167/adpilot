@@ -1,4 +1,4 @@
-// `npm run record -- <youtube|groq|meta>`: ONE real call per source to verify a key,
+// `npm run record -- <youtube|groq|gemini|meta>`: ONE real call per source to verify a key,
 // then save the response as a mock fixture. Reads .env.local itself; never prints keys.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";

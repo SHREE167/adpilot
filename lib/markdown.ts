@@ -15,7 +15,7 @@ export function planToMarkdown(plan: PlanResult): string {
   lines.push(`- **Budget:** ${inr(plan.input.budget)} / month`);
   lines.push(`- **Audience:** ${plan.input.audience_age} — ${plan.input.audience_notes}`);
   lines.push(`- **Goal:** ${plan.input.goal}`);
-  lines.push(`- **Language:** ${plan.input.language}`);
+  lines.push(`- **Audience language:** ${plan.input.language} (plan text is English)`);
   lines.push(`- **Category / tier:** ${plan.category} / ${plan.priceTier}`);
   lines.push(`- **LLM:** ${plan.llmUsed ? plan.llmProvider : "templates (no key)"}`);
   lines.push(`- **Scorer:** ${plan.scorer ?? "xgboost"}`);

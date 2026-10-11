@@ -108,7 +108,7 @@ export function buildZeroRupee(ctx: ZeroRupeeContext): ZeroRupeeItem[] {
   const age = minAge(input.audience_age);
   if (!b2b && age !== null && age < 35) {
     add("organic_reels", 60 + (small ? 15 : 0), {
-      title: `Post ${input.language || "local-language"} Reels before you boost any`,
+      title: `Post Reels before you boost any`,
       why: `Your buyers are ${input.audience_age} in ${input.city}.${small ? ` With ${inr(input.budget)} paid reach is small, so` : " Organic Reels"} find which hook works for free; boost only the winner later.`,
       steps: [
         "Post 3 short Reels a week for two weeks, each with a different hook.",
