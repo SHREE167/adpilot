@@ -124,6 +124,8 @@ export interface ChannelForecast {
   conversions: number;
   cpa: number | null;
   note: string;
+  /** F4: reach was cut to fit Meta's audience pool for the targeting. */
+  reachCapped?: boolean;
 }
 
 export interface ChannelAllocation {
@@ -437,6 +439,30 @@ export interface CreatorFinder {
   picks: CreatorPick[];
 }
 
+/** Meta targeting_spec as sent to reachestimate (subset AdPilot builds). */
+export interface MetaTargetingSpec {
+  geo_locations: { cities: { key: string }[] };
+  age_min: number;
+  age_max: number;
+  flexible_spec?: { interests: { id: string; name: string }[] }[];
+  publisher_platforms: string[];
+}
+
+/** F4: Meta's monthly audience size for the brief's city + age + interests. */
+export interface AudienceEstimate {
+  city: { key: string; name: string; region?: string };
+  ageMin: number;
+  ageMax: number;
+  interests: { id: string; name: string }[];
+  /** Why interests were left out, e.g. under-18 targeting rules. */
+  interestsNote?: string;
+  targetingSpec: MetaTargetingSpec;
+  /** users_lower_bound / users_upper_bound from act_{id}/reachestimate. */
+  lower: number;
+  upper: number;
+  apiVersion: string;
+}
+
 export type ZeroRupeeId =
   | "gbp"
   | "gbp_reviews"
@@ -463,7 +489,7 @@ export interface EnrichmentBundle {
   /** Filled after render by the checkPageSpeed action; absent on the first response. */
   pageSpeed?: Signal<PageSpeedResult>;
   localMarket?: Signal<LocalMarket>;
-  audience?: Signal<unknown>;
+  audience?: Signal<AudienceEstimate>;
   creators?: Signal<CreatorFinder>;
   searchDemand?: Signal<unknown>;
 }

@@ -4,6 +4,7 @@ import { templateCreative } from "./copy-templates";
 import { buildCalendar } from "./enrich/calendar";
 import { fetchLocalMarket } from "./enrich/places";
 import { fetchCreators } from "./enrich/youtube-creators";
+import { fetchAudience } from "./enrich/meta-reach";
 import { runEnrichment } from "./enrich/signal";
 import { buildReadiness } from "./enrich/site-readiness";
 import { buildRealityCheck, hasRealityInputs } from "./reality-check";
@@ -18,7 +19,7 @@ import {
   type ZeroRupeeItem,
 } from "./types";
 import { newPlanId } from "./format";
-import { rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
+import { capMetaReach, rollupForecast, seasonFactor, type SeasonAdjust } from "./forecast";
 import { fillWithLlm, mergeCreative, recognizeWithLlm } from "./llm";
 import { mergeIntel, recognizeHeuristic } from "./recognize";
 import { getRateCard } from "./storage";
@@ -80,6 +81,7 @@ export async function runAgent(
             calendar: () => buildCalendar(input, product.category),
             localMarket: () => fetchLocalMarket(input, product),
             creators: () => fetchCreators(input, product),
+            audience: () => fetchAudience(input, product),
           },
           (key, signal) => trace.signal(key, signal, "enrich")
         ),
@@ -109,18 +111,26 @@ export async function runAgent(
   } else {
     trace.skip("shap", "baseline (v1)");
   }
-  // Step 5: signals that change the numbers (M1: festival-week CPM multipliers).
-  const season = await trace.span(
+  // Step 5: signals that change the numbers: festival-week CPM multipliers (F3)
+  // and Meta's audience pool as a reach ceiling (F4). Only ok signals count.
+  const { season, reachPool } = await trace.span(
     "signal_adjust",
-    (): SeasonAdjust | undefined => {
+    (): { season?: SeasonAdjust; reachPool?: number } => {
       const cal = enrichment?.calendar;
-      if (!cal || cal.status !== "ok" || !cal.data) return undefined;
+      const aud = enrichment?.audience;
       return {
-        weekMultipliers: cal.data.weekMultipliers,
-        weekFestivals: cal.data.weekFestivals,
+        ...(cal?.status === "ok" && cal.data
+          ? { season: { weekMultipliers: cal.data.weekMultipliers, weekFestivals: cal.data.weekFestivals } }
+          : {}),
+        ...(aud?.status === "ok" && aud.data ? { reachPool: aud.data.upper } : {}),
       };
     },
-    { meta: (s) => ({ seasonFactor: Math.round(seasonFactor(s) * 1000) / 1000 }) }
+    {
+      meta: (a) => ({
+        seasonFactor: Math.round(seasonFactor(a.season) * 1000) / 1000,
+        ...(a.reachPool ? { reachPool: a.reachPool } : {}),
+      }),
+    }
   );
   // F10: free actions before the paid mix, ranked from signals + brief.
   let zeroRupee: ZeroRupeeItem[] | undefined;
@@ -142,8 +152,8 @@ export async function runAgent(
   }
   const mix = await trace.span(
     "allocate",
-    () => allocateBudget(input, scores, rateCard, product.priceTier, season),
-    { meta: (m) => ({ channels: m.length }) }
+    () => capMetaReach(allocateBudget(input, scores, rateCard, product.priceTier, season), reachPool),
+    { meta: (m) => ({ channels: m.length, reachCapped: m.filter((r) => r.forecast.reachCapped).length }) }
   );
   const { totals, weeklyForecast } = await trace.span(
     "forecast",

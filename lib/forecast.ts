@@ -124,6 +124,35 @@ export function forecastChannel(
   };
 }
 
+/** Channels whose people come from Meta's Facebook + Instagram audience. */
+export const META_CHANNELS: ReadonlySet<ChannelId> = new Set(["facebook", "instagram_reels", "instagram_feed"]);
+
+/**
+ * F4 signal adjust: Facebook + Instagram rows together never reach more people
+ * than Meta's pool for the targeting. Scales those rows' reach down
+ * proportionally; everything else (and every row when pool is absent) is unchanged.
+ */
+export function capMetaReach(mix: ChannelAllocation[], pool?: number): ChannelAllocation[] {
+  if (!pool || pool <= 0) return mix;
+  const metaReach = mix.reduce((s, r) => s + (META_CHANNELS.has(r.channelId) ? r.forecast.reach : 0), 0);
+  if (metaReach <= pool) return mix;
+  const k = pool / metaReach;
+  const rows = mix.map((r) =>
+    META_CHANNELS.has(r.channelId)
+      ? {
+          ...r,
+          forecast: {
+            ...r.forecast,
+            reach: Math.floor(r.forecast.reach * k),
+            reachCapped: true,
+            note: `${r.forecast.note}; reach capped to Meta's audience pool for this targeting`,
+          },
+        }
+      : r
+  );
+  return rows;
+}
+
 export function rollupForecast(
   mix: ChannelAllocation[],
   input: PlanInput,

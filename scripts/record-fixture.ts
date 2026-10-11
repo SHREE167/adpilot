@@ -14,6 +14,7 @@ import {
   type YtChannelsResponse,
   type YtSearchResponse,
 } from "@/lib/enrich/youtube-creators";
+import { fetchMetaRaw, interestSeeds, META_ENV, META_SOURCE, toAudienceEstimate } from "@/lib/enrich/meta-reach";
 import golden from "../eval/golden-briefs.json";
 import type { PlanInput } from "@/lib/types";
 
@@ -102,7 +103,30 @@ async function youtube(): Promise<void> {
   }
 }
 
-const SOURCES: Record<string, () => Promise<void>> = { youtube };
+async function meta(): Promise<void> {
+  if (!need(...META_ENV)) return;
+  const version = process.env.META_API_VERSION!.trim();
+  const seeds = interestSeeds(DEMO.input, DEMO.expectedCategory);
+  console.log(`Meta ${version}: adgeolocation "${DEMO.input.city}" + adinterest [${seeds.join(", ")}] + act_…/reachestimate`);
+  const raw = await fetchMetaRaw(DEMO.input, DEMO.expectedCategory);
+  console.log(`  geo: ${raw.geo.data?.length ?? 0} hit(s); interests resolved: ${raw.interests.filter((r) => r.data?.length).length}/${seeds.length}`);
+  const fetchedAt = new Date().toISOString();
+  write("fixtures/api-raw/meta-reach.json", { recordedAt: fetchedAt, apiVersion: version, ...raw });
+  let data;
+  try {
+    data = toAudienceEstimate(raw, DEMO.input, version);
+  } catch (err) {
+    console.error(`  no estimate: ${err instanceof Error ? err.message : "unknown"}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`  pool ${data.lower.toLocaleString("en-IN")} - ${data.upper.toLocaleString("en-IN")}`);
+  // Replaces the hand-written placeholder fixtures with the real recording.
+  write(`fixtures/api/${META_SOURCE}/${slug(DEMO.input.city)}.json`, { fetchedAt, data });
+  write(`fixtures/api/${META_SOURCE}/default.json`, { fetchedAt, data });
+}
+
+const SOURCES: Record<string, () => Promise<void>> = { youtube, meta };
 
 const which = process.argv[2];
 if (!which || !SOURCES[which]) {

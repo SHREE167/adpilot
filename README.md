@@ -87,6 +87,7 @@ What M4 adds:
 
 - **Category fix**: the product category is what the business sells, not who buys it. Product name and page title outweigh the audience notes, buyer words ("college students", "parents") are ignored, and text after " for " in the product name counts as audience. The eval reports category accuracy against hand labels.
 - **Local voices (YouTube)**: one `search.list` (type=channel, "{topic} {city}", regionCode=IN, relevanceLanguage from the form) and one `channels.list` per plan, cached 7 days. Keeps 2k to 200k public subscribers and ranks by city mention, topic, language and size. Each creator shows a link, why they fit and a collab cost band from `data/creator-rates.json` (ESTIMATE). YouTube only: AdPilot does not search Instagram creators. Needs `YOUTUBE_API_KEY`.
+- **Who you can reach (Meta)**: resolves the city (`search?type=adgeolocation`), up to 3 interests from what is sold (`type=adinterest`, kept by id) and calls `act_{id}/reachestimate` for the monthly lower/upper bounds. The card shows the bounds and the exact `targeting_spec`. Facebook + Instagram forecast reach is capped at the pool (signal adjust; off = v1 numbers). Under-18 audiences get no interests (Meta allows only age + location for teens). We use `reachestimate` rather than `delivery_estimate`, whose DAU fields Meta removed in v26 (all versions from 27 Oct 2026). Needs `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`; until then it runs on a hand-written MOCK fixture in mock mode.
 - `npm run record -- <youtube|groq|meta>` makes one real call with the keys in `.env.local` and saves the response as a mock fixture (prints status and counts only, never keys).
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
@@ -104,6 +105,9 @@ Set these in the Vercel project **Settings → Environment Variables** (or a loc
 | `PAGESPEED_API_KEY` | No | Mobile speed score + LCP in "Ready to spend?" (deferred after render, cached 24h). Restrict the key to the PageSpeed Insights API |
 | `GOOGLE_PLACES_API_KEY` | No | Local market scan: competitors for "{keyword} in {city}" + whether the business is on Google Maps (2 Text Search calls, 7-day cache, strict field masks). Restrict the key to Places API (New); set a daily quota and budget alert |
 | `YOUTUBE_API_KEY` | No | Local voices: up to 5 YouTube channels for "{topic} {city}" with 2k-200k subscribers (search.list 100 units + channels.list 1 unit per uncached plan, 7-day cache). Restrict the key to YouTube Data API v3 |
+| `META_ACCESS_TOKEN` | No | F4 audience size: system-user token with `ads_read` (server only, no user OAuth, no spend). Needs the two below as well |
+| `META_AD_ACCOUNT_ID` | No | Ad account for `act_{id}/reachestimate` (with or without `act_`) |
+| `META_API_VERSION` | No | Pinned Marketing API version, e.g. `v26.0` |
 | `ADPILOT_MOCK_APIS` | No | `1` = data sources read `fixtures/api/` instead of live APIs (local/demo/tests) |
 
 Optional model overrides: `GROQ_MODEL`, `OPENAI_MODEL`, `GOOGLE_MODEL`.

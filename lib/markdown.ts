@@ -50,6 +50,20 @@ export function planToMarkdown(plan: PlanResult): string {
     lines.push(`- ${rc.advice}`);
     lines.push("");
   }
+  const au = plan.enrichment?.audience;
+  if (au?.status === "ok" && au.data) {
+    const a = au.data;
+    lines.push(`## Who you can reach (Meta${au.mock ? ", MOCK" : ""})`);
+    lines.push("");
+    lines.push(`- **Pool:** ${compactNumber(a.lower)}-${compactNumber(a.upper)} people (${a.city.name}, age ${a.ageMin}-${a.ageMax}${a.interests.length ? `, ${a.interests.map((i) => i.name).join(", ")}` : ""})`);
+    if (a.interestsNote) lines.push(`- ${a.interestsNote}`);
+    lines.push("- **Targeting spec:**");
+    lines.push("");
+    lines.push("```json");
+    lines.push(JSON.stringify(a.targetingSpec, null, 2));
+    lines.push("```");
+    lines.push("");
+  }
   const cr = plan.enrichment?.creators;
   if (cr?.status === "ok" && cr.data?.picks.length) {
     lines.push(`## Local voices (YouTube${cr.mock ? ", MOCK" : ""})`);

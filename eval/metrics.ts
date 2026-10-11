@@ -71,6 +71,11 @@ export function groundedFacts(plan: PlanResult): string[] {
     for (const t of lm.data.top) facts.push(`places: ${t.name}`);
     facts.push(`places: own listing ${lm.data.own.found ? "found" : "missing"}`);
   }
+  const au = e?.audience;
+  if (au?.status === "ok" && au.data && city && au.data.city.name.toLowerCase() === city) {
+    facts.push(`meta: pool ${au.data.lower}-${au.data.upper}`);
+    for (const i of au.data.interests) facts.push(`meta: interest ${i.name}`);
+  }
   const cr = e?.creators;
   if (cr?.status === "ok" && cr.data && city && cr.data.query.toLowerCase().includes(city)) {
     for (const c of cr.data.picks) facts.push(`creator: ${c.title}`);
