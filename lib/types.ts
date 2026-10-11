@@ -114,6 +114,40 @@ export interface ChannelScore {
   rejectReason?: string;
 }
 
+/** F14: a forecast as low / mid / high. mid is the single number shown before M5. */
+export interface ForecastRange {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+/**
+ * Where a band comes from. "default" = flat ±pct on rate-card math; "signal" =
+ * narrowed because a LIVE/MOCK signal backs the number (Meta pool); "calibrated"
+ * is reserved for M6 (empirical intervals from real actuals).
+ */
+export type BandKind = "default" | "signal" | "calibrated";
+
+export interface ForecastBand {
+  kind: BandKind;
+  /** Half-width as a fraction of mid, e.g. 0.3 = ±30%. */
+  pct: number;
+  /** Signal source when kind is "signal", e.g. "meta_reach". */
+  source?: string;
+  /** "default band" / "backed by Meta pool". */
+  label: string;
+}
+
+export interface ForecastRanges {
+  reach: ForecastRange;
+  clicks: ForecastRange;
+  conversions: ForecastRange;
+  /** Band for clicks + conversions (and reach unless reachBand is set). */
+  band: ForecastBand;
+  /** Separate band for reach when a signal narrows it. */
+  reachBand?: ForecastBand;
+}
+
 export interface ChannelForecast {
   impressions: number;
   clicks: number;
@@ -126,6 +160,8 @@ export interface ChannelForecast {
   note: string;
   /** F4: reach was cut to fit Meta's audience pool for the targeting. */
   reachCapped?: boolean;
+  /** F14: low/mid/high; absent on plans made before M5 (derive a default band). */
+  ranges?: ForecastRanges;
 }
 
 export interface ChannelAllocation {
@@ -190,6 +226,8 @@ export interface PlanTotals {
   estimatedCpa: number | null;
   estimatedRoas: number | null;
   estimatedAov: number;
+  /** F14: sums of the channel lows/mids/highs (conservative). Absent before M5. */
+  ranges?: Pick<ForecastRanges, "reach" | "clicks" | "conversions">;
 }
 
 export interface PlanResult {
@@ -274,8 +312,11 @@ export interface RealityCheck {
   profitPerSale: number;
   budget: number;
   breakEvenUnits: number;
-  /** Forecast clicks the conversion rate is measured against. */
+  /** Forecast clicks the conversion rate is measured against (mid). */
   clicks: number;
+  /** F14: the clicks range and the conversion rate needed across it (low clicks -> high rate). */
+  clicksRange?: ForecastRange;
+  requiredCvrRange?: { low: number; high: number };
   /** breakEvenUnits / clicks as a fraction; null when the forecast has no clicks. */
   requiredCvr: number | null;
   benchmark: ConversionBenchmark;

@@ -171,7 +171,7 @@ export async function runAgent(
       "reality_check",
       () => {
         try {
-          return buildRealityCheck({ input, clicks: totals.clicks });
+          return buildRealityCheck({ input, clicks: totals.clicks, clicksRange: totals.ranges?.clicks });
         } catch {
           return undefined;
         }

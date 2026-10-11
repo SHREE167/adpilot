@@ -162,3 +162,40 @@ export function guardedTexts(plan: PlanResult): string[] {
   const kit = plan.launchKit ? Object.values(kitTexts(plan.launchKit)) : [];
   return [...kit, ...copyTexts(plan)];
 }
+
+/**
+ * F14: every range on a plan (channel + totals + reality) has low <= mid <= high,
+ * and Meta-backed reach highs together stay within the Meta pool.
+ */
+export function rangeChecks(plan: PlanResult): { checked: number; ordered: number; signalBands: number; poolOk: boolean } {
+  let checked = 0;
+  let ordered = 0;
+  const check = (r: { low: number; mid: number; high: number } | undefined) => {
+    if (!r) return;
+    checked++;
+    if (r.low <= r.mid && r.mid <= r.high && r.low >= 0) ordered++;
+  };
+  let signalBands = 0;
+  let metaHigh = 0;
+  for (const m of plan.mix) {
+    const r = m.forecast.ranges;
+    check(r?.reach);
+    check(r?.clicks);
+    check(r?.conversions);
+    if (r?.reachBand?.kind === "signal") {
+      signalBands++;
+      metaHigh += r.reach.high;
+    }
+  }
+  const t = plan.totals.ranges;
+  check(t?.reach);
+  check(t?.clicks);
+  check(t?.conversions);
+  const rc = plan.realityCheck;
+  if (rc?.requiredCvrRange && rc.requiredCvr !== null) {
+    check({ low: rc.requiredCvrRange.low, mid: rc.requiredCvr, high: rc.requiredCvrRange.high });
+  }
+  const pool = plan.enrichment?.audience?.status === "ok" ? plan.enrichment.audience.data?.upper : undefined;
+  const poolOk = !signalBands || pool === undefined || metaHigh <= pool;
+  return { checked, ordered, signalBands, poolOk };
+}

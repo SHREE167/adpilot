@@ -21,7 +21,8 @@ import { ZeroRupeeCard } from "@/components/ZeroRupeeCard";
 import { channelColors } from "@/lib/theme";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
-import type { PlanResult, Signal } from "@/lib/types";
+import { rangesOf, rangeText, totalsRangesOf } from "@/lib/ranges";
+import type { ChannelForecast, ForecastRange, PlanResult, Signal } from "@/lib/types";
 
 const KIND_LABEL: Record<string, string> = {
   google_site: "Google site (GDN)",
@@ -42,6 +43,30 @@ function SectionHead({ n, of, title, sub }: { n: string; of: string; title: stri
       <h2 className="story-bit display">{title}</h2>
       {sub ? <p className="story-bit sub">{sub}</p> : null}
     </header>
+  );
+}
+
+/** Reach / clicks / conversions as mid with low–high, and where the band comes from. */
+function ChannelRanges({ forecast }: { forecast: ChannelForecast }) {
+  const r = rangesOf(forecast);
+  const rows: [string, ForecastRange, (n: number) => string, string][] = [
+    ["Reach", r.reach, compactNumber, (r.reachBand ?? r.band).label],
+    ["Clicks", r.clicks, compactNumber, r.band.label],
+    ["Conversions", r.conversions, (n) => n.toFixed(1), r.band.label],
+  ];
+  return (
+    <dl className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-tint p-3 text-sm">
+      {rows.map(([label, range, fmt, band]) => (
+        <div key={label} className="min-w-0">
+          <dt className="text-fog">{label}</dt>
+          <dd className="num mt-1 text-paper">{fmt(range.mid)}</dd>
+          <dd className="num text-xs text-fog" title={band}>
+            {rangeText(range, fmt)}
+          </dd>
+          <dd className={`text-[11px] ${band === "default band" ? "text-fog" : "text-mint"}`}>{band}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -113,15 +138,21 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const chapter = (id: string) => ({ n: pad(sectionIds.indexOf(id) + 1), of: pad(sectionIds.length) });
 
   const cpa = plan.totals.estimatedCpa;
-  const kpis = useMemo(
-    () => [
-      { label: "Spend", value: plan.totals.budget, format: inr },
-      { label: "Impressions", value: plan.totals.impressions, format: compactNumber },
-      { label: "Clicks", value: plan.totals.clicks, format: compactNumber },
-      { label: "Conversions", value: plan.totals.conversions, format: (n: number) => n.toFixed(1) },
-    ],
-    [plan.totals]
-  );
+  const totalsR = totalsRangesOf(plan.totals, plan.mix.map((m) => m.forecast));
+  const metaBacked = plan.mix.some((m) => m.forecast.ranges?.reachBand?.kind === "signal");
+  const conv = (n: number) => n.toFixed(1);
+  const kpis: { label: string; value: number; format: (n: number) => string; range?: ForecastRange; band?: string }[] = [
+    { label: "Spend", value: plan.totals.budget, format: inr },
+    {
+      label: "Reach",
+      value: plan.totals.reach,
+      format: compactNumber,
+      range: totalsR.reach,
+      band: metaBacked ? "Meta reach backed by the Meta pool (±15%), rest ±30%" : "default band ±30%",
+    },
+    { label: "Clicks", value: plan.totals.clicks, format: compactNumber, range: totalsR.clicks, band: "default band ±30%" },
+    { label: "Conversions", value: plan.totals.conversions, format: conv, range: totalsR.conversions, band: "default band ±30%" },
+  ];
 
   return (
     <div className="story-reel">
@@ -152,11 +183,19 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
               <dd className="num">
                 <CountUp value={k.value} format={k.format} />
               </dd>
+              {k.range ? (
+                <dd className="num mt-2 text-sm text-fog" title={`${k.band}. Low and high sum the channel ranges.`}>
+                  {rangeText(k.range, k.format)}
+                  <span className="font-sans"> · {k.band}</span>
+                </dd>
+              ) : (
+                <dd className="mt-2 text-sm text-fog">set by you</dd>
+              )}
             </div>
           ))}
         </dl>
         <p className="story-bit mt-4 text-sm text-fog">
-          Reach <span className="num text-paper">{compactNumber(plan.totals.reach)}</span> · CPA{" "}
+          Impressions <span className="num text-paper">{compactNumber(plan.totals.impressions)}</span> · CPA{" "}
           <span className="num text-paper">{cpa ? inr(cpa) : "—"}</span> · mix sums to{" "}
           <span className="num text-paper">{inr(mixSum)}</span>. {plan.disclaimer}
         </p>
@@ -286,6 +325,9 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
                 <CountUp value={row.percent} format={(n) => pct(n, 0)} />
               </p>
               <p className="num mt-2 text-paper">{inr(row.budget)}</p>
+              <p className="num mt-1 text-xs text-fog">
+                {rangeText(rangesOf(row.forecast).clicks, compactNumber)} clicks
+              </p>
             </a>
           ))}
         </div>
@@ -300,9 +342,9 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
                 </span>
               </h3>
               <p className="mt-4 leading-relaxed text-fog">{row.explanation}</p>
-              <p className="num mt-4 text-sm text-fog">
-                Score {row.score} · {compactNumber(row.forecast.impressions)} impr. ·{" "}
-                {compactNumber(row.forecast.clicks)} clicks · CTR {ctrPct(row.forecast.ctr)}
+              <ChannelRanges forecast={row.forecast} />
+              <p className="num mt-3 text-sm text-fog">
+                Score {row.score} · {compactNumber(row.forecast.impressions)} impr. · CTR {ctrPct(row.forecast.ctr)}
                 {row.forecast.reachCapped ? " · reach capped to Meta pool" : ""}
               </p>
               {shapBy.get(row.channelId) ? (

@@ -1,7 +1,7 @@
 # AdPilot eval report (F16, M4)
 
-- **Date:** 2026-10-11 (2026-10-11T07:35:48.300Z)
-- **Git:** `2d82acb` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T13:13:18.896Z)
+- **Git:** `ee735b1` (uncommitted changes)
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
 
@@ -17,8 +17,10 @@
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 11.6 / 14.1 | 28.2 / 34.9 |
+| Latency p50 / p95 (ms, offline mock) | 9.1 / 19.9 | 20.7 / 30.1 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
+| Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
+| Reach bands backed by a signal (Meta pool) / high within pool | 0 / 20 of 20 | 32 / 20 of 20 |
 | Launch-kit text similarity (3-gram Jaccard, lower = more specific) | — no kit (v1 template copy: 0.23) | 0.21 |
 | Grounding rate (numbers in kit + copy + outreach traceable) | 100% (88/88) | 100% (1805/1805) |
 | Guard: numbers checked / removed (kit rewrite + copy) | — (no guard) | 190 / 0 |
@@ -59,6 +61,7 @@
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is `runAgent` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
 - Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
+- **Ranges (F14)**: every reach / clicks / conversions forecast is low / mid / high. Default band ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok, with the combined high capped at the pool. Totals sum the channel lows/mids/highs. The eval fails if any range is out of order or a Meta-backed high exceeds the pool.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
 - **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
 - **Guard: checked / removed** sums the `grounding_guard` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Gemini response recorded by `npm run record -- gemini` and replayed offline. A real Gemini response (`npm run record -- gemini`) is kept in `fixtures/api/llm_gemini/` for the fallback tests; with the English-only prompt it is English and passes the guard (Gemini's first, pre-fix answer was Hinglish and is kept inline in the tests as a rejection case). The launch-kit rewrite is Gemini first: mock mode replays the Gemini recording, then Groq's, with the same echo rule (80%+ unchanged lines = failure). gpt-oss-20b returned its input unchanged in all three of its recordings.

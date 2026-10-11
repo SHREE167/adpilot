@@ -1,4 +1,5 @@
 import { costBand } from "./creator-rates";
+import { rangeText, totalsRangesOf } from "./ranges";
 import { compactNumber, ctrPct, inr } from "./format";
 import type { PlanResult } from "./types";
 
@@ -79,15 +80,17 @@ export function planToMarkdown(plan: PlanResult): string {
   }
   lines.push("## Forecast totals (ESTIMATE)");
   lines.push("");
-  lines.push(`| Metric | Value |`);
-  lines.push(`| --- | --- |`);
-  lines.push(`| Spend | ${inr(plan.totals.budget)} |`);
-  lines.push(`| Impressions | ${compactNumber(plan.totals.impressions)} |`);
-  lines.push(`| Clicks | ${compactNumber(plan.totals.clicks)} |`);
-  lines.push(`| Reach | ${compactNumber(plan.totals.reach)} |`);
-  lines.push(`| Conversions | ${plan.totals.conversions} |`);
-  lines.push(`| CPA | ${plan.totals.estimatedCpa ? inr(plan.totals.estimatedCpa) : "—"} |`);
-  lines.push(`| ROAS | ${plan.totals.estimatedRoas ?? "—"} |`);
+  const tr = totalsRangesOf(plan.totals, plan.mix.map((m) => m.forecast));
+  const conv = (n: number) => n.toFixed(1);
+  lines.push(`| Metric | Value | Range (low–high) |`);
+  lines.push(`| --- | --- | --- |`);
+  lines.push(`| Spend | ${inr(plan.totals.budget)} | — |`);
+  lines.push(`| Impressions | ${compactNumber(plan.totals.impressions)} | — |`);
+  lines.push(`| Clicks | ${compactNumber(plan.totals.clicks)} | ${rangeText(tr.clicks, compactNumber)} |`);
+  lines.push(`| Reach | ${compactNumber(plan.totals.reach)} | ${rangeText(tr.reach, compactNumber)} |`);
+  lines.push(`| Conversions | ${plan.totals.conversions} | ${rangeText(tr.conversions, conv)} |`);
+  lines.push(`| CPA | ${plan.totals.estimatedCpa ? inr(plan.totals.estimatedCpa) : "—"} | — |`);
+  lines.push(`| ROAS | ${plan.totals.estimatedRoas ?? "—"} | — |`);
   lines.push("");
   lines.push("## Channel mix");
   lines.push("");

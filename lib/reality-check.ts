@@ -1,6 +1,6 @@
 import benchmarksJson from "@/data/benchmarks.json";
 import { inr } from "./format";
-import type { ConversionBenchmark, PlanInput, RealityCheck, RealityVerdict } from "./types";
+import type { ConversionBenchmark, ForecastRange, PlanInput, RealityCheck, RealityVerdict } from "./types";
 
 type Band = Omit<ConversionBenchmark, "goal">;
 
@@ -60,9 +60,11 @@ function units(n: number): string {
  *   profitPerSale = price × margin
  *   breakEvenUnits = ceil(budget / profitPerSale)
  *   requiredCvr = breakEvenUnits / forecast clicks
+ * The verdict uses mid clicks; with a clicks range (F14) the needed rate is
+ * also given across it (fewest clicks -> highest rate).
  */
 export function buildRealityCheck(
-  args: { input: PlanInput; clicks: number },
+  args: { input: PlanInput; clicks: number; clicksRange?: ForecastRange },
   table: BenchmarkTable = BENCHMARKS
 ): RealityCheck | undefined {
   const { input } = args;
@@ -73,6 +75,11 @@ export function buildRealityCheck(
   const breakEvenUnits = Math.ceil(budget / profitPerSale);
   const clicks = Math.max(0, Math.round(args.clicks));
   const requiredCvr = clicks > 0 ? breakEvenUnits / clicks : null;
+  const cr = args.clicksRange;
+  const requiredCvrRange =
+    requiredCvr !== null && cr && cr.low > 0 && cr.high > 0
+      ? { low: breakEvenUnits / cr.high, high: breakEvenUnits / cr.low }
+      : undefined;
   const benchmark = benchmarkFor(String(input.goal), table);
   const ratio = requiredCvr === null ? null : requiredCvr / benchmark.typical;
   const verdict = verdictFor(ratio);
@@ -106,7 +113,9 @@ export function buildRealityCheck(
     budget,
     breakEvenUnits,
     clicks,
+    ...(cr ? { clicksRange: { low: Math.round(cr.low), mid: clicks, high: Math.round(cr.high) } } : {}),
     requiredCvr,
+    ...(requiredCvrRange ? { requiredCvrRange } : {}),
     benchmark,
     ratio,
     verdict,

@@ -191,8 +191,15 @@ describe("capMetaReach (signal adjust)", () => {
     assert.equal(capMetaReach(mix, undefined), mix);
   });
 
-  it("pool above forecast: unchanged", () => {
-    assert.equal(capMetaReach(mix, 1_000_000), mix);
+  it("pool above forecast: reach numbers unchanged, only the band narrows (F14)", () => {
+    const out = capMetaReach(mix, 1_000_000);
+    assert.deepEqual(
+      out.map((r) => r.forecast.reach),
+      mix.map((r) => r.forecast.reach)
+    );
+    assert.ok(out.every((r) => !r.forecast.reachCapped));
+    assert.equal(out[0].forecast.ranges?.reachBand?.label, "backed by Meta pool");
+    assert.deepEqual(out[2], mix[2], "non-Meta rows untouched");
   });
 
   it("pool below forecast: FB + IG scaled to the pool, others untouched", () => {

@@ -113,6 +113,19 @@ export function RealityCard({ rc, hasFreeActions }: { rc: RealityCheck; hasFreeA
               <Term value={cvrPct(rc.requiredCvr)} label="of clicks must buy" />
             </div>
             <ConversionScale rc={rc} />
+            {rc.requiredCvrRange && rc.clicksRange ? (
+              <p className="mt-4 text-sm text-fog">
+                Across the forecast range of{" "}
+                <span className="num text-paper">
+                  {compactNumber(rc.clicksRange.low)}–{compactNumber(rc.clicksRange.high)}
+                </span>{" "}
+                clicks (default band ±30%), between{" "}
+                <span className="num text-paper">
+                  {cvrPct(rc.requiredCvrRange.low)} and {cvrPct(rc.requiredCvrRange.high)}
+                </span>{" "}
+                of clicks must buy. The verdict uses the middle estimate.
+              </p>
+            ) : null}
           </>
         ) : null}
         <p className="mt-4 text-sm text-fog">

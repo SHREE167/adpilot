@@ -56,7 +56,7 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
 | M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | done |
 | M4 | Meta reach, YouTube creators, launch kit + grounding guard | done (Meta runs on a mock fixture until keys are added) |
-| M5 | Budget slider, forecast ranges | |
+| M5 | Budget slider, forecast ranges | in progress (ranges done) |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
 | M7 | Ad previews, share/print, trace page | |
 | M8 | Eval v2 vs v1 report, demo script | |
@@ -93,6 +93,10 @@ What M4 adds:
 - Groq default model is now `openai/gpt-oss-20b`: Groq moved the Llama models to its Enterprise tier, and free keys get HTTP 404 on `llama-3.1-8b-instant`. Override with `GROQ_MODEL`.
 - `npm run eval` adds category accuracy, launch-kit text similarity (lower = more specific) and grounding rate (target 100%).
 - `npm run record -- <youtube|groq|gemini|meta>` makes one real call with the keys in `.env.local` and saves the response as a mock fixture (prints status and counts only, never keys).
+
+What M5 adds:
+
+- **Forecast ranges (F14)**: reach, clicks and conversions are low / mid / high everywhere they appear (KPI tiles, channel tiles and cards, the weekly chart as a shaded clicks band, the markdown export). The default band is ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok ("backed by Meta pool") and the combined high never exceeds the pool. Totals sum the channel lows and highs. The reality check keeps its verdict on the middle estimate and adds the conversion rate needed across the click range. Bands are data (`kind: default | signal | calibrated`), so M6 can switch to intervals calibrated from real results. Plans saved before M5 get a default band derived on the fly.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
 

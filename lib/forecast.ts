@@ -1,3 +1,4 @@
+import { defaultRanges, META_POOL_BAND, rangeAround, SIGNAL_BAND_PCT, totalRanges } from "./ranges";
 import type {
   ChannelAllocation,
   ChannelForecast,
@@ -108,14 +109,20 @@ export function forecastChannel(
   const weight = CHANNEL_CVR_WEIGHT[entry.id] ?? 0.4;
   const conversions = clicks * conversionRate(input, priceTier) * weight;
   const cpa = conversions > 0 ? budget / conversions : null;
+  const mid = {
+    reach: Math.round(reach),
+    clicks: Math.round(clicks),
+    conversions: Math.round(conversions * 10) / 10,
+  };
   return {
     impressions: Math.round(impressions),
-    clicks: Math.round(clicks),
+    clicks: mid.clicks,
     ctr: entry.ctr,
     cpm: factor === 1 ? entry.cpm : Math.round((entry.cpm / factor) * 100) / 100,
     cpc: entry.cpc,
-    reach: Math.round(reach),
-    conversions: Math.round(conversions * 10) / 10,
+    reach: mid.reach,
+    conversions: mid.conversions,
+    ranges: defaultRanges(mid),
     cpa: cpa === null ? null : Math.round(cpa),
     note:
       factor === 1
@@ -128,28 +135,47 @@ export function forecastChannel(
 export const META_CHANNELS: ReadonlySet<ChannelId> = new Set(["facebook", "instagram_reels", "instagram_feed"]);
 
 /**
- * F4 signal adjust: Facebook + Instagram rows together never reach more people
- * than Meta's pool for the targeting. Scales those rows' reach down
- * proportionally; everything else (and every row when pool is absent) is unchanged.
+ * F4 + F14 signal adjust, from Meta's audience pool for the targeting:
+ * - Facebook + Instagram rows together never reach more people than the pool
+ *   (reach scaled down proportionally, rows flagged reachCapped);
+ * - their reach band narrows to ±15% ("backed by Meta pool") and the combined
+ *   high stays within the pool.
+ * Without a pool every row is returned unchanged (output == v1).
  */
 export function capMetaReach(mix: ChannelAllocation[], pool?: number): ChannelAllocation[] {
   if (!pool || pool <= 0) return mix;
   const metaReach = mix.reduce((s, r) => s + (META_CHANNELS.has(r.channelId) ? r.forecast.reach : 0), 0);
-  if (metaReach <= pool) return mix;
-  const k = pool / metaReach;
-  const rows = mix.map((r) =>
-    META_CHANNELS.has(r.channelId)
-      ? {
-          ...r,
-          forecast: {
-            ...r.forecast,
-            reach: Math.floor(r.forecast.reach * k),
-            reachCapped: true,
-            note: `${r.forecast.note}; reach capped to Meta's audience pool for this targeting`,
-          },
-        }
-      : r
-  );
+  const k = metaReach > pool ? pool / metaReach : 1;
+  const rows = mix.map((r) => {
+    if (!META_CHANNELS.has(r.channelId)) return r;
+    const reach = k < 1 ? Math.floor(r.forecast.reach * k) : r.forecast.reach;
+    const base = r.forecast.ranges ?? defaultRanges(r.forecast);
+    return {
+      ...r,
+      forecast: {
+        ...r.forecast,
+        reach,
+        ...(k < 1
+          ? {
+              reachCapped: true,
+              note: `${r.forecast.note}; reach capped to Meta's audience pool for this targeting`,
+            }
+          : {}),
+        ranges: { ...base, reach: rangeAround(reach, SIGNAL_BAND_PCT), reachBand: META_POOL_BAND },
+      },
+    };
+  });
+  // Keep the Meta rows' combined high inside the pool: shrink only the part above mid.
+  const meta = rows.filter((r) => META_CHANNELS.has(r.channelId));
+  const sumMid = meta.reduce((s, r) => s + r.forecast.ranges!.reach.mid, 0);
+  const sumHigh = meta.reduce((s, r) => s + r.forecast.ranges!.reach.high, 0);
+  if (sumHigh > pool && sumHigh > sumMid) {
+    const room = Math.max(0, pool - sumMid) / (sumHigh - sumMid);
+    for (const r of meta) {
+      const reachR = r.forecast.ranges!.reach;
+      reachR.high = reachR.mid + Math.floor((reachR.high - reachR.mid) * room);
+    }
+  }
   return rows;
 }
 
@@ -200,6 +226,7 @@ export function rollupForecast(
       impressions,
       clicks,
       reach,
+      ranges: totalRanges(mix.map((r) => r.forecast)),
       conversions: Math.round(conversions * 10) / 10,
       estimatedCpa,
       estimatedRoas,

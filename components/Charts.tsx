@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   Pie,
   PieChart,
   ReferenceLine,
@@ -19,6 +20,7 @@ import {
 import { useTheme } from "@/components/ThemeToggle";
 import { compactNumber, inr } from "@/lib/format";
 import { channelColors, THEME_PALETTE } from "@/lib/theme";
+import { totalsRangesOf } from "@/lib/ranges";
 import type { PlanResult } from "@/lib/types";
 
 /** Colours for the active theme; channel colours are lifted to >= 3:1 on the card surface. */
@@ -103,20 +105,35 @@ export function ImpressionsBar({ plan }: { plan: PlanResult }) {
   );
 }
 
+/** F14: weekly clicks get the plan's clicks band (same low/mid and high/mid ratios as the totals). */
+export function weeklyWithBands(plan: PlanResult) {
+  const r = totalsRangesOf(plan.totals, plan.mix.map((m) => m.forecast)).clicks;
+  const lo = r.mid > 0 ? r.low / r.mid : 1;
+  const hi = r.mid > 0 ? r.high / r.mid : 1;
+  return plan.weeklyForecast.map((w) => ({
+    ...w,
+    clicksBand: [Math.floor(w.clicks * lo), Math.ceil(w.clicks * hi)] as [number, number],
+  }));
+}
+
 export function WeeklyLine({ plan }: { plan: PlanResult }) {
   const c = useChartTheme();
   const [impressions, clicks, spend] = c.p.series;
   return (
     <ResponsiveContainer width="100%" height={420}>
-      <LineChart data={plan.weeklyForecast} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <ComposedChart data={weeklyWithBands(plan)} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid stroke={c.p.rule} strokeDasharray="3 3" />
         <XAxis dataKey="label" tick={{ ...c.tick, fontSize: 12 }} />
         <YAxis tick={c.tick} tickFormatter={(v) => compactNumber(Number(v))} />
         <Tooltip
           contentStyle={c.tooltip}
           formatter={(value, name) => [
-            name === "spend" ? inr(Number(value)) : compactNumber(Number(value)),
-            `${name} ESTIMATE`,
+            Array.isArray(value)
+              ? `${compactNumber(Number(value[0]))}–${compactNumber(Number(value[1]))}`
+              : name === "spend"
+                ? inr(Number(value))
+                : compactNumber(Number(value)),
+            Array.isArray(value) ? "clicks range (default band ±30%)" : `${name} ESTIMATE`,
           ]}
         />
         <Legend />
@@ -136,10 +153,20 @@ export function WeeklyLine({ plan }: { plan: PlanResult }) {
               }}
             />
           ))}
+        <Area
+          type="monotone"
+          dataKey="clicksBand"
+          name="clicks range"
+          stroke="none"
+          fill={clicks}
+          fillOpacity={0.18}
+          isAnimationActive={false}
+          legendType="square"
+        />
         <Line type="monotone" dataKey="impressions" stroke={impressions} strokeWidth={2} dot={false} />
         <Line type="monotone" dataKey="clicks" stroke={clicks} strokeWidth={2} dot={false} />
         <Line type="monotone" dataKey="spend" stroke={spend} strokeWidth={2} dot={false} />
-      </LineChart>
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

@@ -20,6 +20,7 @@ import {
   pctOf,
   percentile,
   planEvidence,
+  rangeChecks,
   guardedTexts,
   kitText,
   meanPairwiseSimilarity,
@@ -83,6 +84,8 @@ interface Scores {
   /** Copy + outreach numbers traceable (both variants share the template scripts). */
   copy: { grounded: number; total: number };
   english: { ok: number; total: number };
+  /** F14 */
+  ranges: { checked: number; ordered: number; signalBands: number; poolOk: number };
 }
 
 function score(runs: Run[], variant: Variant): Scores {
@@ -144,6 +147,18 @@ function score(runs: Run[], variant: Variant): Scores {
     p95: percentile(ms, 95),
     mixSumOk: runs.filter((r) => mixSumsToBudget(r.plan)).length,
     ...textScores(runs),
+    ranges: runs.reduce(
+      (acc, r) => {
+        const c = rangeChecks(r.plan);
+        return {
+          checked: acc.checked + c.checked,
+          ordered: acc.ordered + c.ordered,
+          signalBands: acc.signalBands + c.signalBands,
+          poolOk: acc.poolOk + (c.poolOk ? 1 : 0),
+        };
+      },
+      { checked: 0, ordered: 0, signalBands: 0, poolOk: 0 }
+    ),
   };
 }
 
@@ -228,6 +243,16 @@ async function main() {
     ["Latency p50 / p95 (ms, offline mock)", `${f1(s1.p50)} / ${f1(s1.p95)}`, `${f1(s2.p50)} / ${f1(s2.p95)}`],
     ["Mix sums to budget", `${s1.mixSumOk} / ${n}`, `${s2.mixSumOk} / ${n}`],
     [
+      "Ranges ordered (low ≤ mid ≤ high)",
+      `${pctOf(s1.ranges.ordered, s1.ranges.checked)}% (${s1.ranges.ordered}/${s1.ranges.checked})`,
+      `${pctOf(s2.ranges.ordered, s2.ranges.checked)}% (${s2.ranges.ordered}/${s2.ranges.checked})`,
+    ],
+    [
+      "Reach bands backed by a signal (Meta pool) / high within pool",
+      `${s1.ranges.signalBands} / ${s1.ranges.poolOk} of ${n}`,
+      `${s2.ranges.signalBands} / ${s2.ranges.poolOk} of ${n}`,
+    ],
+    [
       "Launch-kit text similarity (3-gram Jaccard, lower = more specific)",
       s1.hasKit ? f2(s1.textSimilarity) : `— no kit (v1 template copy: ${f2(s1.textSimilarity)})`,
       s2.hasKit ? f2(s2.textSimilarity) : "—",
@@ -292,6 +317,7 @@ ${perBrief}
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is \`runAgent\` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
 - Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
+- **Ranges (F14)**: every reach / clicks / conversions forecast is low / mid / high. Default band ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok, with the combined high capped at the pool. Totals sum the channel lows/mids/highs. The eval fails if any range is out of order or a Meta-backed high exceeds the pool.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
 - **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
 - **Guard: checked / removed** sums the \`grounding_guard\` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Gemini response recorded by \`npm run record -- gemini\` and replayed offline. A real Gemini response (\`npm run record -- gemini\`) is kept in \`fixtures/api/llm_gemini/\` for the fallback tests; with the English-only prompt it is English and passes the guard (Gemini's first, pre-fix answer was Hinglish and is kept inline in the tests as a rejection case). The launch-kit rewrite is Gemini first: mock mode replays the Gemini recording, then Groq's, with the same echo rule (80%+ unchanged lines = failure). gpt-oss-20b returned its input unchanged in all three of its recordings.
@@ -311,6 +337,10 @@ ${perBrief}
   for (const [name, s] of [["v1", s1], ["v2", s2]] as const) {
     if (s.mixSumOk !== n) failures.push(`${name}: ${n - s.mixSumOk} mix(es) do not sum to the budget`);
     if (!(s.signature > 0)) failures.push(`${name}: signature briefs produced the same mix`);
+  }
+  for (const [name, s] of [["v1", s1], ["v2", s2]] as const) {
+    if (s.ranges.ordered !== s.ranges.checked) failures.push(`${name}: ${s.ranges.checked - s.ranges.ordered} range(s) not low <= mid <= high`);
+    if (s.ranges.poolOk !== n) failures.push(`${name}: Meta-backed reach high above the pool`);
   }
   if (s2.grounding.total && s2.grounding.grounded < s2.grounding.total) {
     failures.push(`v2: grounding ${pctOf(s2.grounding.grounded, s2.grounding.total)}% (must be 100%)`);
