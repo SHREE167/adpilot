@@ -40,8 +40,9 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
 | `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |
 | `lib/recognize.ts`, `lib/llm.ts` | Heuristic product intel + optional LLM (Groq → OpenAI → Gemini). |
-| `lib/scoring.ts`, `lib/ml/infer.ts`, `lib/ml/features.ts` | XGBoost per channel (25 features, 12 channels) + policy rules. `explainScore()` is zero-ablation (F9 replaces it with TreeSHAP). |
-| `ml/train.py`, `ml/model.json` | Synthetic training; nodes have no `cover` yet (needed for F9). |
+| `lib/scoring.ts`, `lib/ml/infer.ts`, `lib/ml/features.ts` | XGBoost per channel (25 features, 12 channels) + policy rules. `explainScore()` returns the top TreeSHAP drivers; `assertModelSelfCheck()` also checks cover + SHAP additivity. |
+| `lib/ml/shap.ts`, `lib/ml/feature-labels.ts`, `components/ShapWaterfall.tsx` | F9: exact TreeSHAP (Lundberg 2018, Alg. 2), pure TS; human labels for the 25 features; "Why this channel?" waterfall; `PlanResult.shap`. |
+| `ml/train.py`, `ml/model.json` | Synthetic training; every node has `cover`. Python is blocked locally (Smart App Control): retrain in Colab (steps in the train.py docstring). |
 | `lib/allocate.ts`, `lib/forecast.ts` | Pure: 2–5 channels, 50% cap, sum == budget; rate-card math + weekly rollup with season multipliers. |
 | `lib/storage.ts`, `lib/rate-card.ts` | Postgres (`adpilot_plans`, `adpilot_rate_card`) or memory + localStorage. |
 | `lib/types.ts` | `PlanResult` contract, including Signal/Enrichment/Trace types (client-safe). |

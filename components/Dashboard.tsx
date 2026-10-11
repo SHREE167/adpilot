@@ -10,6 +10,7 @@ import { LocalMarketCard, showLocalMarket } from "@/components/LocalMarketCard";
 import { PlanHealth } from "@/components/PlanHealth";
 import { ReadinessCard } from "@/components/ReadinessCard";
 import { RealityCard } from "@/components/RealityCard";
+import { ShapWaterfall } from "@/components/ShapWaterfall";
 import { usePageSpeed } from "@/components/SpeedCheck";
 import { TimingCard } from "@/components/TimingCard";
 import { useTheme } from "@/components/ThemeToggle";
@@ -96,6 +97,7 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const zeroRupee = plan.zeroRupee || [];
   const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const reality = plan.realityCheck;
+  const shapBy = new Map((plan.shap?.channels || []).map((c) => [c.channelId, c]));
   const chapterIds = [
     "cover",
     reality ? "reality" : null,
@@ -300,6 +302,9 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
               Score {row.score} · {compactNumber(row.forecast.impressions)} impr. ·{" "}
               {compactNumber(row.forecast.clicks)} clicks · CTR {ctrPct(row.forecast.ctr)}
             </p>
+            {shapBy.get(row.channelId) ? (
+              <ShapWaterfall shap={shapBy.get(row.channelId)!} note={plan.shap!.note} />
+            ) : null}
           </StoryScene>
         ))}
       </div>

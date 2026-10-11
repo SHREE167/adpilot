@@ -5,13 +5,31 @@ import {
   explainScore,
   modelCard,
   predictAllScores,
+  shapForChannel,
 } from "@/lib/ml/infer";
 import {
   isB2B,
   isProfessionalAudience,
 } from "@/lib/infer";
 import type { RateCard } from "@/lib/rate-card";
-import type { ChannelScore, PlanInput, PriceTier } from "@/lib/types";
+import type { ChannelScore, PlanInput, PlanShap, PriceTier } from "@/lib/types";
+
+export const SHAP_NOTE =
+  "Model trained on synthetic briefs; explanations describe the model, not the market.";
+
+/** F9: exact TreeSHAP for every channel, paired with the plan's final score. */
+export function explainChannels(
+  input: PlanInput,
+  ctx: ScoreContext,
+  scores: ChannelScore[]
+): PlanShap {
+  const x = extractFeatures(input, ctx.category, ctx.priceTier);
+  return {
+    method: "treeshap",
+    note: SHAP_NOTE,
+    channels: scores.map((s) => ({ ...shapForChannel(s.channelId, x), score: s.score })),
+  };
+}
 
 export interface ScoreContext {
   category: string;

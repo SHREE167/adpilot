@@ -219,7 +219,37 @@ export interface PlanResult {
   zeroRupee?: ZeroRupeeItem[];
   /** F8: break-even verdict; absent when the brief has no price/margin. */
   realityCheck?: RealityCheck;
+  /** F9: exact TreeSHAP per channel; absent on plans made before M3. */
+  shap?: PlanShap;
   trace?: PlanTrace;
+}
+
+/** One feature's SHAP contribution, in score points. */
+export interface ShapDriver {
+  feature: string;
+  /** The feature as it applies to this brief, e.g. "Audience age ~21". */
+  label: string;
+  value: number;
+}
+
+/** base + Σ drivers + other == prediction (raw model output, before the 0-100 clamp). */
+export interface ChannelShap {
+  channelId: ChannelId;
+  base: number;
+  prediction: number;
+  /** The plan's final score for the channel (clamped, rounded, after policy rules). */
+  score: number;
+  /** Top drivers by |value|. */
+  drivers: ShapDriver[];
+  /** Sum of every other feature's contribution. */
+  other: number;
+  otherCount: number;
+}
+
+export interface PlanShap {
+  method: "treeshap";
+  note: string;
+  channels: ChannelShap[];
 }
 
 export type RealityVerdict = "healthy" | "tight" | "likely_loss";

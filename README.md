@@ -54,7 +54,7 @@ Brief: `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Goal: the honest media planne
 | --- | --- | --- |
 | M1 | Enrichment framework (Signal, timeouts, cache, mock mode), agent trace, LIVE/ESTIMATE badges, site readiness (tracking + funnel), festival calendar | done |
 | M2 | PageSpeed (deferred), Google Places local market, zero-rupee layer | done |
-| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | in progress |
+| M3 | Reality check (break-even), exact TreeSHAP, eval harness v0 | done |
 | M4 | Meta reach, YouTube creators, launch kit + grounding guard | |
 | M5 | Budget slider, forecast ranges | |
 | M6 | Critic, actuals loop, calibrated intervals, explore slice | |
@@ -80,6 +80,7 @@ What M2 adds:
 What M3 adds:
 
 - **Can this pay for itself? (reality check)**: two optional form fields, price of one sale (₹) and margin %. AdPilot works out `breakEvenUnits = ceil(budget / (price × margin))` and `requiredCvr = units / forecast clicks`, then compares that to a per-goal band in `data/benchmarks.json` (ESTIMATE, editable). The verdict is **Healthy** (at or under typical), **Tight** (up to 2× typical) or **Likely loss** (more than 2×). Tight and Likely loss suggest a smaller first test and link to the free actions. Leave the fields empty and the check is skipped; it never blocks the plan.
+- **Why this channel? (exact TreeSHAP)**: each channel in the mix has a collapsible waterfall. It starts at the average score, shows the top 5 drivers ("Audience age ~21 +6.2", "Not a SaaS brand −3.1"), then the other features combined, and ends at the model score. Values come from exact TreeSHAP (Lundberg et al. 2018, Algorithm 2) in `lib/ml/shap.ts`, using per-node cover exported by `ml/train.py`; they add up to the score exactly. The waterfall says plainly that the model was trained on synthetic briefs, so it explains the model, not the market.
 - **Eval harness v0** (`npm run eval`): runs 20 golden briefs (`eval/golden-briefs.json`) through the v1 path (`runAgent(input, { baseline: true })`, no enrichment) and through v2, in mock mode with no keys and no network. It writes `eval/report.md` with the date, git hash and a v1 vs v2 table covering specificity (grounded facts per plan), diversity (mean Jaccard distance of mixes), the ₹3k student vs ₹40k B2B signature check, reality coverage, explanation additivity and latency p50/p95. It exits non-zero if a mix does not sum to its budget or the signature briefs collapse to the same mix.
 
 `ADPILOT_MOCK_APIS=1` makes every source read `fixtures/api/<source>/*.json` (`{ "fetchedAt", "data" }`), so demos and tests run offline. Mock mode is for local use; fixture files are not bundled into Vercel functions.
@@ -213,6 +214,8 @@ ml/.venv/Scripts/pip install -r ml/requirements.txt
 npm run train-model
 ```
 
+If Python cannot run locally (on Windows, Smart App Control can block numpy's DLLs), retrain in Google Colab: `pip install xgboost==3.4.1 scikit-learn==1.9.1`, upload `ml/train.py` to `ml/`, run `python ml/train.py`, download `ml/model.json`. The app's self-check confirms every node has cover and that SHAP adds up on the self-check rows. The October 2026 Colab retrain moved mean R² from 0.8792 to 0.8791 (library-version drift); the trees differ slightly from the original export.
+
 ## Sample fixtures
 
 Checked into `fixtures/`:
@@ -244,7 +247,8 @@ app/actions.ts                 Server Actions (createPlan, loadPlan, …)
 lib/agent.ts                   runAgent (the 7 steps)
 lib/ml/infer.ts                XGBoost tree walker
 ml/model.json                  trained booster (committed)
-ml/train.py                    retrains the booster
+ml/train.py                    retrains the booster (exports per-node cover)
+lib/ml/shap.ts                 exact TreeSHAP for the waterfall
 lib/scoring.ts                 model scores + policy rules
 lib/allocate.ts                2–5 channels, sum == budget
 lib/forecast.ts                rate-card math

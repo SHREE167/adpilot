@@ -11,6 +11,7 @@ import {
   type EnrichmentBundle,
   type PlanInput,
   type PlanResult,
+  type PlanShap,
   type RealityCheck,
   type TraceMeta,
   type ZeroRupeeItem,
@@ -22,7 +23,7 @@ import { mergeIntel, recognizeHeuristic } from "./recognize";
 import { getRateCard } from "./storage";
 import { lookupPlacements } from "./placements";
 import { scrapeSite } from "./scrape";
-import { scoreChannels } from "./scoring";
+import { explainChannels, scoreChannels } from "./scoring";
 import { createTrace, type TraceListener } from "./trace";
 import { buildZeroRupee } from "./zero-rupee";
 
@@ -95,6 +96,17 @@ export async function runAgent(
       scoreChannels(input, { category: product.category, priceTier: product.priceTier }, rateCard),
     { meta: (s) => ({ channels: s.length, rejected: s.filter((x) => x.rejected).length }) }
   );
+  // Step 4b (F9): exact TreeSHAP per channel, for the "Why this channel?" waterfall.
+  let shap: PlanShap | undefined;
+  if (v2) {
+    shap = await trace.span(
+      "shap",
+      () => explainChannels(input, { category: product.category, priceTier: product.priceTier }, scores),
+      { meta: (s) => ({ channels: s.channels.length }) }
+    );
+  } else {
+    trace.skip("shap", "baseline (v1)");
+  }
   // Step 5: signals that change the numbers (M1: festival-week CPM multipliers).
   const season = await trace.span(
     "signal_adjust",
@@ -210,6 +222,7 @@ export async function runAgent(
     ...(enrichment ? { enrichment } : {}),
     ...(zeroRupee ? { zeroRupee } : {}),
     ...(realityCheck ? { realityCheck } : {}),
+    ...(shap ? { shap } : {}),
     trace: planTrace,
   };
 }

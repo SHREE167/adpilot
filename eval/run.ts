@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { runAgent } from "@/lib/agent";
 import { extractFeatures } from "@/lib/ml/features";
-import { predictChannelScore } from "@/lib/ml/infer";
+import { predictChannelScore, rawChannelScore } from "@/lib/ml/infer";
 import { CHANNEL_IDS, type PlanInput, type PlanResult } from "@/lib/types";
 import golden from "./golden-briefs.json";
 import {
@@ -61,6 +61,7 @@ interface Scores {
   realityCount: number;
   verdicts: Record<string, number>;
   additivity: string;
+  additivityPct: number;
   p50: number;
   p95: number;
   mixSumOk: number;
@@ -77,6 +78,7 @@ function score(runs: Run[], variant: Variant): Scores {
     if (v) verdicts[v] = (verdicts[v] || 0) + 1;
   }
   let additivity: string;
+  let additivityPct: number;
   if (variant === "v1") {
     let ok = 0;
     let n = 0;
@@ -87,9 +89,23 @@ function score(runs: Run[], variant: Variant): Scores {
         if (ablationAdditive((xx) => predictChannelScore(ch, xx), x)) ok++;
       }
     }
-    additivity = `${pctOf(ok, n)}% (zero-ablation, ${n} checks)`;
+    additivityPct = pctOf(ok, n);
+    additivity = `${additivityPct}% (zero-ablation, ${n} checks)`;
   } else {
-    additivity = "n/a (model has no cover yet)";
+    // Exact TreeSHAP: the stored waterfall must add up to the model's own output.
+    let ok = 0;
+    let n = 0;
+    for (const r of runs) {
+      const x = extractFeatures(r.plan.input, r.plan.category, r.plan.priceTier);
+      for (const c of r.plan.shap?.channels || []) {
+        n++;
+        const total = c.base + c.drivers.reduce((s, d) => s + d.value, 0) + c.other;
+        const raw = rawChannelScore(c.channelId, x);
+        if (Math.abs(total - c.prediction) <= 1e-3 && Math.abs(c.prediction - raw) <= 1e-3) ok++;
+      }
+    }
+    additivityPct = pctOf(ok, n);
+    additivity = `${additivityPct}% (TreeSHAP, ${n} checks)`;
   }
   const ms = runs.map((r) => r.ms);
   return {
@@ -101,6 +117,7 @@ function score(runs: Run[], variant: Variant): Scores {
     realityCount: runs.filter((r) => r.plan.realityCheck).length,
     verdicts,
     additivity,
+    additivityPct,
     p50: percentile(ms, 50),
     p95: percentile(ms, 95),
     mixSumOk: runs.filter((r) => mixSumsToBudget(r.plan)).length,
@@ -194,7 +211,7 @@ ${perBrief}
 - **v1** is \`runAgent(input, { baseline: true })\`: no enrichment step, no season adjust, no zero-rupee layer, no reality check. Its mix is the v1 mix.
 - **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts (only when the query names the brief's city), zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
 - **Diversity** is the mean pairwise Jaccard distance between the channel sets of all briefs (0 = every plan picks the same channels, 1 = no overlap).
-- **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP once \`ml/model.json\` has per-node cover (F9).
+- **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
 - **Latency** is \`runAgent\` wall time on this machine in offline mock mode, after one warm-up run; production adds the real scrape and API calls.
 - M3 does not change which channels are picked (only festival pricing touches allocation), so v1 and v2 diversity are expected to match. The live audience caps (F4), critic (F12) and explore slice (F20) are what move diversity later.
 `;
@@ -209,6 +226,7 @@ ${perBrief}
     if (s.mixSumOk !== n) failures.push(`${name}: ${n - s.mixSumOk} mix(es) do not sum to the budget`);
     if (!(s.signature > 0)) failures.push(`${name}: signature briefs produced the same mix`);
   }
+  if (s2.additivityPct < 100) failures.push(`v2: TreeSHAP additivity ${s2.additivityPct}% (must be 100%)`);
   if (failures.length) {
     console.error(`\nEval FAILED:\n- ${failures.join("\n- ")}`);
     process.exitCode = 1;
