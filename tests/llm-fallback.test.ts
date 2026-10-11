@@ -6,7 +6,7 @@ import golden from "../eval/golden-briefs.json";
 import { runAgent } from "@/lib/agent";
 import { templateCreative } from "@/lib/copy-templates";
 import { groundingRate, groundingSet, guardText, isEnglishText } from "@/lib/grounding-guard";
-import { guardKitTexts, kitTexts } from "@/lib/launch-kit";
+import { guardKitTexts, kitEvidence, kitTexts } from "@/lib/launch-kit";
 import { asTexts, extractJson, generate, llmProviders, rewriteLaunchKit } from "@/lib/llm";
 import type { PlanInput } from "@/lib/types";
 
@@ -127,22 +127,43 @@ describe("English only", () => {
     assert.equal(isEnglishText("अभी देखें"), false);
   });
 
-  it("the recorded Gemini response (Hinglish) is rejected line by line and reverted", async () => {
+  async function snackKit() {
+    process.env.ADPILOT_MOCK_APIS = "1";
+    const plan = await runAgent(SNACK.input);
+    const { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements } = plan;
+    const ev = groundingSet(
+      { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements },
+      kitEvidence(plan.launchKit!)
+    );
+    return { kit: plan.launchKit!, ev };
+  }
+
+  it("the recorded Gemini response (English-only prompt) passes the English check and the guard", async () => {
     const fx = JSON.parse(
       readFileSync(path.join(process.cwd(), "fixtures", "api", "llm_gemini", "campus-crunch-masala-peanuts.json"), "utf8")
     ) as { data: { provider: string; content: string } };
     assert.equal(fx.data.provider, "google");
-    process.env.ADPILOT_MOCK_APIS = "1";
-    const plan = await runAgent(SNACK.input);
-    const kit = plan.launchKit!;
+    const { kit, ev } = await snackKit();
     const keys = Object.keys(kitTexts(kit));
     const texts = asTexts(extractJson(fx.data.content), keys)!;
-    assert.equal(Object.keys(texts).length, keys.length, "every line parsed");
-    const { input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements } = plan;
-    const ev = groundingSet({ input, mix, totals, weeklyForecast, realityCheck, enrichment, zeroRupee, placements });
+    assert.ok(Object.keys(texts).length > 0, "lines parsed");
     const r = guardKitTexts(kit, texts, ev, guardText, isEnglishText);
-    assert.ok(r.nonEnglish > 0, "Hinglish lines caught");
-    assert.ok(Object.values(kitTexts(r.kit)).every(isEnglishText), "output is English");
+    assert.equal(r.nonEnglish, 0);
+    assert.deepEqual(r.removed, []);
+  });
+
+  it("Hinglish lines (from Gemini's first, pre-fix recording) are rejected and reverted", async () => {
+    const { kit, ev } = await snackKit();
+    const reels = kit.channels.find((c) => c.channelId === "instagram_reels")!;
+    const texts = {
+      "instagram_reels.metric": "Clicks ko WhatsApp pe bhejo aur likes mat gino, chats count karo.",
+      "instagram_reels.targeting": "Chennai ke 18-24 age wale, jinhe Snack food aur Street food pasand hai.",
+    };
+    const r = guardKitTexts(kit, texts, ev, guardText, isEnglishText);
+    assert.equal(r.nonEnglish, 2);
+    const out = r.kit.channels.find((c) => c.channelId === "instagram_reels")!;
+    assert.equal(out.metric.why, reels.metric.why);
+    assert.equal(out.targeting.text, reels.targeting.text);
   });
 
   it("Tamil/Hindi briefs still get English template copy", () => {

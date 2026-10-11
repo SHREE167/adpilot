@@ -1,7 +1,7 @@
 # AdPilot eval report (F16, M4)
 
-- **Date:** 2026-10-11 (2026-10-11T06:55:33.078Z)
-- **Git:** `13798fb` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T07:25:06.505Z)
+- **Git:** `e86a693` (uncommitted changes)
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
 
@@ -17,7 +17,7 @@
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 13.0 / 25.2 | 36.4 / 45.0 |
+| Latency p50 / p95 (ms, offline mock) | 11.0 / 15.8 | 23.9 / 35.4 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
 | Launch-kit text similarity (3-gram Jaccard, lower = more specific) | — no kit (v1 template copy: 0.23) | 0.21 |
 | Grounding rate (numbers in kit + copy + outreach traceable) | 100% (88/88) | 100% (1805/1805) |
@@ -61,6 +61,6 @@
 - Channel picks are the same in v1 and v2 (signals change prices, reach caps and words, not the scorer), so mix diversity matches. The critic (F12) and explore slice (F20) are what move it later. The Meta reach cap (F4) only binds when forecast reach exceeds the pool, which these mock budgets never do.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
 - **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
-- **Guard: checked / removed** sums the `grounding_guard` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Groq response recorded by `npm run record -- groq` and replayed offline. A real Gemini response (`npm run record -- gemini`) is kept in `fixtures/api/llm_gemini/` for the fallback tests; it came back in Hinglish, which the English check rejects line by line.
+- **Guard: checked / removed** sums the `grounding_guard` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Groq response recorded by `npm run record -- groq` and replayed offline. A real Gemini response (`npm run record -- gemini`) is kept in `fixtures/api/llm_gemini/` for the fallback tests; with the English-only prompt it is English and passes the guard (Gemini's first, pre-fix answer was Hinglish and is kept inline in the tests as a rejection case). Note: gpt-oss-20b returned its input unchanged in all three recordings, so the replayed "Groq" wording is effectively the template text.
 - **Ad copy + outreach scripts** are the template scripts (no LLM in eval). Since M4 they contain no invented offers or numbers: the owner fills `{{offer}}` / `{{price}}`. Before the fix they traced 74% in v1 (168/227) because of lines like "10% off on 3+ packs".
 - **English-only lines** checks every kit, copy and outreach line with `isEnglishText` (no Indic script, no Hinglish function words). The form's language describes the audience only.

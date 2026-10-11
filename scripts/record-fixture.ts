@@ -16,7 +16,7 @@ import {
 } from "@/lib/enrich/youtube-creators";
 import { fetchMetaRaw, interestSeeds, META_ENV, META_SOURCE, toAudienceEstimate } from "@/lib/enrich/meta-reach";
 import { runAgent } from "@/lib/agent";
-import { kitTexts } from "@/lib/launch-kit";
+import { buildLaunchKit, kitTexts } from "@/lib/launch-kit";
 import { asTexts, callProvider, extractJson, KIT_LLM_SOURCE, KIT_MAX_TOKENS, kitRewritePrompt, llmProviders, type LlmProviderId } from "@/lib/llm";
 import golden from "../eval/golden-briefs.json";
 import type { PlanInput } from "@/lib/types";
@@ -153,7 +153,15 @@ async function llmRecord(id: LlmProviderId, envKey: string, label: string, sourc
     process.exitCode = 1;
     return;
   }
-  const texts = kitTexts(plan.launchKit!);
+  // Always the deterministic kit: plan.launchKit may already carry a replayed (older) recording.
+  const base = buildLaunchKit({
+    input: plan.input,
+    category: plan.category,
+    mix: plan.mix,
+    placements: plan.placements,
+    enrichment: plan.enrichment,
+  });
+  const texts = kitTexts(base);
   console.log(`${label} (${provider.model}): rewrite ${Object.keys(texts).length} launch-kit lines in English (1 call)`);
   const content = await callProvider(provider, kitRewritePrompt(texts, DEMO.input, plan.product.tone), AbortSignal.timeout(30000), KIT_MAX_TOKENS);
   const parsed = asTexts(extractJson(content), Object.keys(texts));
