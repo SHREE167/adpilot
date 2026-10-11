@@ -7,6 +7,14 @@ planning data. The Next.js app loads only the fitted trees, not this simulator.
 
 Usage:
   ml\\.venv\\Scripts\\python ml\\train.py
+
+Every node in model.json carries `cover` (from the booster dump with_stats)
+so lib/ml/shap.ts can compute exact TreeSHAP. Seed, data and hyperparameters
+are unchanged, so predictions should match the previous model.
+
+If Python cannot run locally (e.g. Windows Smart App Control blocks numpy),
+run it in Google Colab: pip install xgboost==3.4.1 scikit-learn==1.9.1, upload
+this file to ml/train.py, run `python ml/train.py`, download ml/model.json.
 """
 
 from __future__ import annotations
@@ -418,8 +426,11 @@ def random_row(rng: random.Random) -> tuple[list[float], dict, dict]:
 
 
 def dump_tree(node: dict, feature_names: list[str]) -> dict:
+    # cover = sum of hessians reaching the node (row count for squared error).
+    # Exact TreeSHAP (lib/ml/shap.ts) needs it; kept unrounded so child/parent
+    # ratios stay exact.
     if "leaf" in node:
-        return {"leaf": float(node["leaf"])}
+        return {"leaf": float(node["leaf"]), "cover": float(node["cover"])}
     split = node["split"]
     if isinstance(split, str) and split.startswith("f") and split[1:].isdigit():
         idx = int(split[1:])
@@ -434,6 +445,7 @@ def dump_tree(node: dict, feature_names: list[str]) -> dict:
         "feature": name,
         "index": idx,
         "threshold": float(node["split_condition"]),
+        "cover": float(node["cover"]),
         "yes": yes,
         "no": no,
     }
@@ -485,7 +497,7 @@ def main() -> None:
             "mae": round(float(mean_absolute_error(y[test_i], pred)), 3),
         }
         booster = model.get_booster()
-        raw_trees = [json.loads(t) for t in booster.get_dump(dump_format="json")]
+        raw_trees = [json.loads(t) for t in booster.get_dump(dump_format="json", with_stats=True)]
         trees = [dump_tree(t, FEATURE_NAMES) for t in raw_trees]
         cfg = json.loads(booster.save_config())
         base = cfg["learner"]["learner_model_param"]["base_score"]
@@ -526,6 +538,7 @@ def main() -> None:
         "trained_on": "12000 synthetic India media-planning briefs (no live ad APIs)",
         "feature_names": FEATURE_NAMES,
         "channels": CHANNELS,
+        "node_stats": "cover",
         "metrics": metrics,
         "mean_r2": round(float(np.mean([m["r2"] for m in metrics.values()])), 4),
         "mean_mae": round(float(np.mean([m["mae"] for m in metrics.values()])), 3),
