@@ -180,7 +180,10 @@ export async function runAgent(
     llmUsed = llm.used;
     llmProvider = llm.used ? llm.provider : null;
     creative = mergeCreative(mix, templates, llm.fill);
-    if (llm.product) product = mergeIntel(product, llm.product);
+    // Wording only: the channels were scored on this category/tier, so they stay fixed.
+    if (llm.product) {
+      product = mergeIntel(product, { ...llm.product, category: undefined, priceTier: undefined });
+    }
   } else {
     trace.skip("copy_llm", "time budget");
   }

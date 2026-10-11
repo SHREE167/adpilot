@@ -277,6 +277,8 @@ export async function recognizeWithLlm(
   "confidence": 0.0
 }
 Do not invent a page you were not given. If scrape failed, use the form.
+category = what the business SELLS, never who buys it. Audience words (college students, parents, founders) do not set the category.
+Examples: "streetwear tees for college students" → fashion; "sweet shop" → food; "coding bootcamp" → education; "salon" → local_service.
 Heuristic guess: ${JSON.stringify(heuristic)}
 Form: ${JSON.stringify({ product_name: input.product_name, city: input.city, goal: input.goal, audience_age: input.audience_age, audience_notes: input.audience_notes, language: input.language })}
 Site: ${JSON.stringify({ title: site.title, description: site.description, h1: site.h1, jsonLdName: site.jsonLdName, jsonLdType: site.jsonLdType, excerpt: site.textExcerpt?.slice(0, 500), scraped: site.scraped })}`;

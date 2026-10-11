@@ -98,6 +98,15 @@ export function ablationAdditive(
   return Math.abs(base + sum - fx) <= tol;
 }
 
+/** Share of briefs whose recognized category equals the labelled one, plus the misses. */
+export function categoryAccuracy(
+  rows: readonly { id: string; expected?: string; actual: string }[]
+): { correct: number; total: number; misses: { id: string; expected: string; actual: string }[] } {
+  const labelled = rows.filter((r): r is { id: string; expected: string; actual: string } => Boolean(r.expected));
+  const misses = labelled.filter((r) => r.expected !== r.actual);
+  return { correct: labelled.length - misses.length, total: labelled.length, misses };
+}
+
 export function pctOf(n: number, d: number): number {
   return d ? Math.round((n / d) * 1000) / 10 : 0;
 }

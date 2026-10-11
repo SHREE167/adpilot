@@ -1,5 +1,6 @@
 import "server-only";
 import { inferCategoryAndTier } from "@/lib/infer";
+import { ML_CATEGORIES } from "@/lib/ml/features";
 import type { PlanInput, ProductIntel, SiteSnapshot } from "@/lib/types";
 
 function evidenceFrom(site: SiteSnapshot, input: PlanInput): string[] {
@@ -83,10 +84,14 @@ export function mergeIntel(
   patch: Partial<ProductIntel> | null
 ): ProductIntel {
   if (!patch) return base;
+  const category =
+    patch.category && (ML_CATEGORIES as readonly string[]).includes(patch.category)
+      ? patch.category
+      : base.category;
   return {
     recognizedName: patch.recognizedName || base.recognizedName,
     summary: patch.summary || base.summary,
-    category: patch.category || base.category,
+    category,
     priceTier: patch.priceTier || base.priceTier,
     audience: patch.audience || base.audience,
     tone: patch.tone || base.tone,

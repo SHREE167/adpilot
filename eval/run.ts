@@ -11,6 +11,7 @@ import { CHANNEL_IDS, type PlanInput, type PlanResult } from "@/lib/types";
 import golden from "./golden-briefs.json";
 import {
   ablationAdditive,
+  categoryAccuracy,
   groundedFacts,
   jaccardDistance,
   meanPairwiseJaccard,
@@ -23,6 +24,8 @@ import {
 interface Brief {
   id: string;
   label: string;
+  /** What the business sells (not who buys it). */
+  expectedCategory?: string;
   input: PlanInput;
 }
 
@@ -53,6 +56,7 @@ async function runAll(variant: Variant): Promise<Run[]> {
 }
 
 interface Scores {
+  category: ReturnType<typeof categoryAccuracy>;
   specificity: number;
   factsTotal: number;
   diversity: number;
@@ -108,7 +112,11 @@ function score(runs: Run[], variant: Variant): Scores {
     additivity = `${additivityPct}% (TreeSHAP, ${n} checks)`;
   }
   const ms = runs.map((r) => r.ms);
+  const category = categoryAccuracy(
+    runs.map((r) => ({ id: r.brief.id, expected: r.brief.expectedCategory, actual: r.plan.category }))
+  );
   return {
+    category,
     specificity: facts.reduce((s, n) => s + n, 0) / runs.length,
     factsTotal: facts.reduce((s, n) => s + n, 0),
     diversity: meanPairwiseJaccard(mixes),
@@ -153,7 +161,10 @@ async function main() {
   const dirty = git("git status --porcelain") ? " (uncommitted changes)" : "";
   const now = new Date();
 
+  const acc = (s: Scores) =>
+    `${pctOf(s.category.correct, s.category.total)}% (${s.category.correct}/${s.category.total})`;
   const rows: [string, string, string][] = [
+    ["Category accuracy (vs expectedCategory)", acc(s1), acc(s2)],
     ["Specificity (grounded facts / plan)", f1(s1.specificity), f1(s2.specificity)],
     ["Diversity (mean Jaccard distance of mixes)", f2(s1.diversity), f2(s2.diversity)],
     ["Unique channel mixes", `${s1.uniqueMixes} / ${n}`, `${s2.uniqueMixes} / ${n}`],
@@ -187,7 +198,7 @@ async function main() {
       const base = v1ById.get(r.brief.id)!.plan;
       const same = mixChannels(base).join() === mixChannels(r.plan).join();
       const rc = r.plan.realityCheck;
-      return `| ${r.brief.label} | ₹${r.brief.input.budget.toLocaleString("en-IN")} | ${r.brief.input.goal} | ${r.plan.category} | ${r.plan.mix.map((m) => `${m.name} ${Math.round(m.percent)}%`).join(", ")} | ${same ? "yes" : "no"} | ${groundedFacts(r.plan).length} | ${rc ? rc.verdict.replace("_", " ") : "—"} |`;
+      return `| ${r.brief.label} | ₹${r.brief.input.budget.toLocaleString("en-IN")} | ${r.brief.input.goal} | ${r.plan.category}${r.brief.expectedCategory && r.brief.expectedCategory !== r.plan.category ? ` ✗ (expected ${r.brief.expectedCategory})` : ""} |${r.plan.mix.map((m) => `${m.name} ${Math.round(m.percent)}%`).join(", ")} | ${same ? "yes" : "no"} | ${groundedFacts(r.plan).length} | ${rc ? rc.verdict.replace("_", " ") : "—"} |`;
     }),
   ].join("\n");
 
@@ -209,6 +220,7 @@ ${perBrief}
 ## How to read this
 
 - **v1** is \`runAgent(input, { baseline: true })\`: no enrichment step, no season adjust, no zero-rupee layer, no reality check. Its mix is the v1 mix.
+- **Category accuracy** compares the recognized category (heuristic only here; no LLM in eval) with each brief's hand-labelled \`expectedCategory\`: what the business sells, not who buys it. The labels were written alongside the M4 recognizer fix, so 100% here is a regression floor, not proof of generalisation.
 - **Specificity** counts facts a plan cites that trace to an ok signal or to the user's own numbers: readiness fixes, festivals, festival-priced weeks, Google Places facts (only when the query names the brief's city), zero-rupee items that cite a source, and the break-even verdict. Mock fixtures stand in for live APIs here.
 - **Diversity** is the mean pairwise Jaccard distance between the channel sets of all briefs (0 = every plan picks the same channels, 1 = no overlap).
 - **Explanation additivity** checks that the explanation adds up to the score. v1's zero-ablation uses an all-zero baseline over all 25 features. v2 uses exact TreeSHAP (Lundberg et al. 2018) over per-node cover: average score + Σ drivers + other features must equal the model's raw output within 1e-3.
@@ -219,6 +231,9 @@ ${perBrief}
   writeFileSync(path.join(process.cwd(), "eval", "report.md"), report);
   console.log(`\nAdPilot eval (${n} briefs, mock mode, git ${hash}${dirty})\n`);
   console.log(table);
+  if (s2.category.misses.length) {
+    console.log(`\nCategory misses: ${s2.category.misses.map((m) => `${m.id} ${m.actual}≠${m.expected}`).join(", ")}`);
+  }
   console.log("\nWrote eval/report.md");
 
   const failures: string[] = [];

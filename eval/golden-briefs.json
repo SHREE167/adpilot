@@ -1,9 +1,10 @@
 {
-  "note": "F16 golden briefs: 5 cities, 5 categories, budgets ₹1k-₹100k, all 6 goals, English/Tamil/Hindi. Domains point at fixtures/api/site mocks; briefs without price/margin exercise the reality-check skip path.",
+  "note": "F16 golden briefs: 5 cities, 5 categories, budgets ₹1k-₹100k, all 6 goals, English/Tamil/Hindi. Domains point at fixtures/api/site mocks; briefs without price/margin exercise the reality-check skip path. expectedCategory = what the business sells (not who buys it), for the category-accuracy metric.",
   "briefs": [
     {
       "id": "sig-3k-student",
       "label": "₹3k student snack · Chennai",
+      "expectedCategory": "food",
       "input": {
         "domain": "campus-crunch.example.in",
         "product_name": "Campus Crunch masala peanuts",
@@ -20,6 +21,7 @@
     {
       "id": "sig-40k-b2b",
       "label": "₹40k B2B SaaS · Bengaluru",
+      "expectedCategory": "saas",
       "input": {
         "domain": "pipeboard-crm.example",
         "product_name": "Pipeboard inbound-to-demo CRM for Indian B2B teams",
@@ -36,6 +38,7 @@
     {
       "id": "chn-biryani",
       "label": "Biryani restaurant · Chennai",
+      "expectedCategory": "food",
       "input": {
         "domain": "",
         "product_name": "Thalappakatti-style biryani restaurant, Velachery",
@@ -52,6 +55,7 @@
     {
       "id": "chn-neet",
       "label": "NEET coaching · Chennai",
+      "expectedCategory": "education",
       "input": {
         "domain": "",
         "product_name": "NEET coaching classes for Class 11-12",
@@ -68,6 +72,7 @@
     {
       "id": "chn-tailor",
       "label": "Tailoring shop · Chennai",
+      "expectedCategory": "local_service",
       "input": {
         "domain": "",
         "product_name": "Ladies tailoring and alterations, Mylapore",
@@ -82,6 +87,7 @@
     {
       "id": "blr-payroll",
       "label": "Payroll SaaS · Bengaluru",
+      "expectedCategory": "saas",
       "input": {
         "domain": "",
         "product_name": "Payroll and HR software for Indian startups",
@@ -98,6 +104,7 @@
     {
       "id": "blr-cloud-kitchen",
       "label": "Cloud kitchen · Bengaluru",
+      "expectedCategory": "food",
       "input": {
         "domain": "",
         "product_name": "Healthy millet bowls cloud kitchen, HSR Layout",
@@ -114,6 +121,7 @@
     {
       "id": "blr-thrift-app",
       "label": "Thrift fashion app · Bengaluru",
+      "expectedCategory": "fashion",
       "input": {
         "domain": "",
         "product_name": "Thrift fashion resale app",
@@ -128,6 +136,7 @@
     {
       "id": "blr-bootcamp",
       "label": "Coding bootcamp · Bengaluru",
+      "expectedCategory": "education",
       "input": {
         "domain": "",
         "product_name": "Full-stack coding bootcamp with placement support",
@@ -144,6 +153,7 @@
     {
       "id": "del-kurta",
       "label": "Block-print kurtas · Delhi",
+      "expectedCategory": "fashion",
       "input": {
         "domain": "kalamkari-threads.example",
         "product_name": "Kalamkari Threads hand-block printed kurtas",
@@ -160,6 +170,7 @@
     {
       "id": "del-ias",
       "label": "IAS coaching · Delhi",
+      "expectedCategory": "education",
       "input": {
         "domain": "",
         "product_name": "UPSC civil services coaching, Mukherjee Nagar",
@@ -174,6 +185,7 @@
     {
       "id": "del-ac-repair",
       "label": "AC repair · Delhi",
+      "expectedCategory": "local_service",
       "input": {
         "domain": "",
         "product_name": "AC repair and servicing at home",
@@ -190,6 +202,7 @@
     {
       "id": "del-mithai",
       "label": "Sweet shop · Delhi",
+      "expectedCategory": "food",
       "input": {
         "domain": "",
         "product_name": "Halwai sweet shop, Chandni Chowk",
@@ -206,6 +219,7 @@
     {
       "id": "mum-analytics",
       "label": "Analytics SaaS · Mumbai",
+      "expectedCategory": "saas",
       "input": {
         "domain": "",
         "product_name": "Retail analytics SaaS for D2C brands",
@@ -222,6 +236,7 @@
     {
       "id": "mum-streetwear",
       "label": "Streetwear · Mumbai",
+      "expectedCategory": "fashion",
       "input": {
         "domain": "",
         "product_name": "Oversized graphic tees streetwear label",
@@ -238,6 +253,7 @@
     {
       "id": "mum-pet-grooming",
       "label": "Pet grooming · Mumbai",
+      "expectedCategory": "local_service",
       "input": {
         "domain": "",
         "product_name": "Pet grooming salon, Andheri West",
@@ -252,6 +268,7 @@
     {
       "id": "mum-vada-pav",
       "label": "Vada pav stall · Mumbai",
+      "expectedCategory": "food",
       "input": {
         "domain": "",
         "product_name": "Vada pav and chai stall near Dadar station",
@@ -266,6 +283,7 @@
     {
       "id": "cbe-salon",
       "label": "Unisex salon · Coimbatore",
+      "expectedCategory": "local_service",
       "input": {
         "domain": "glow-salon.example",
         "product_name": "Glow Unisex Salon, RS Puram",
@@ -282,6 +300,7 @@
     {
       "id": "cbe-silk",
       "label": "Silk sarees · Coimbatore",
+      "expectedCategory": "fashion",
       "input": {
         "domain": "",
         "product_name": "Kanchipuram silk sarees showroom",
@@ -298,6 +317,7 @@
     {
       "id": "cbe-spoken-english",
       "label": "Spoken English classes · Coimbatore",
+      "expectedCategory": "education",
       "input": {
         "domain": "",
         "product_name": "Spoken English and interview skills classes",
