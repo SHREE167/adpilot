@@ -1,11 +1,29 @@
-# AdPilot eval report (F16, M4)
+# AdPilot eval report (F16, M8 final)
 
-- **Date:** 2026-10-11 (2026-10-11T14:11:28.816Z)
-- **Git:** `99ef4e6` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T14:42:34.715Z)
+- **Git:** `85f2093` (uncommitted changes)
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
+- **Reproduce:** `npm run eval` (exits non-zero if a gated check fails)
 
-## v1 vs v2
+## Headline
+
+| Metric | v1 | v2 |
+| --- | --- | --- |
+| Category accuracy | 100% (20/20) | 100% (20/20) |
+| Specificity (grounded facts per plan) | 0.0 | 13.9 |
+| Grounding (numbers traceable) | 100% (88/88) | 100% (1805/1805) |
+| English-only lines | 100% (597/597) | 100% (1302/1302) |
+| Explanation additivity | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
+| Slider: every gated check passes | — (no slider) | 20 / 20 briefs |
+| Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
+| Reality check coverage | 0% (0/20) | 70% (14/20) |
+| Diversity (mean Jaccard distance) | 0.62 | 0.62 |
+| Latency p50 / p95 (ms, offline mock) | 11.3 / 20.3 | 73.5 / 118.6 |
+
+v2 beats v1 on specificity (0.0 → 13.9 grounded facts per plan), explanation additivity (0% → 100%) and reality coverage, with 100% grounding. Diversity is equal (0.62 vs 0.62), so F16's "beats v1 on diversity" is **not met yet**: the scorer that picks channels is unchanged, and the critic and explore slice (M6) are what move it.
+
+## v1 vs v2 (full)
 
 | Metric | v1 (enrichment off) | v2 |
 | --- | --- | --- |
@@ -17,7 +35,7 @@
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 13.0 / 31.3 | 95.1 / 180.1 |
+| Latency p50 / p95 (ms, offline mock) | 11.3 / 20.3 | 73.5 / 118.6 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
 | Slider: briefs with a budget grid | — (no slider) | 20 / 20 (1807 slider steps) |
 | Slider: totals = slider budget at every step | — (no slider) | 20 / 20 |
@@ -25,7 +43,7 @@
 | Slider: 1-5 channels, none > 50% from ₹3,000; LinkedIn policy | — (no slider) | 20 / 20 |
 | Slider: channel count never falls as budget rises | — (no slider) | 20 / 20 |
 | Slider: impressions never fall as budget rises (reported, not gated) | — (no slider) | 12 / 20 |
-| Slider: recompute p50 / p95 (ms per move) | — (no slider) | 0.098 / 0.405 |
+| Slider: recompute p50 / p95 (ms per move) | — (no slider) | 0.027 / 0.093 |
 | Signature ₹3k vs ₹40k mixes at 0.25× and 4× (Jaccard) | — (no slider) | 1.00 at 0.25× / 1.00 at 4× |
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reach bands backed by a signal (Meta pool) / high within pool | 0 / 20 of 20 | 32 / 20 of 20 |
@@ -73,6 +91,17 @@
 - **Ranges (F14)**: every reach / clicks / conversions forecast is low / mid / high. Default band ±30% on rate-card math; Facebook + Instagram reach narrows to ±15% when the Meta pool signal is ok, with the combined high capped at the pool. Totals sum the channel lows/mids/highs. The eval fails if any range is out of order or a Meta-backed high exceeds the pool.
 - **Launch-kit text similarity** is the mean pairwise Jaccard similarity of word 3-gram sets of each plan's launch-kit text (lower = less boilerplate shared across briefs). v1 has no kit; its column shows the same measure over v1's template ad copy for reference.
 - **Grounding rate** extracts every number (₹, K/L/Cr/M, %, times, Indian digit scripts) from the launch kit, ad angles, outreach scripts and channel explanations and checks it against the plan's structured numbers and the signals, at the precision shown. Free text is never evidence. It proves numbers trace to the plan, not that they are used correctly: small integers (weeks, ages) are usually traceable.
-- **Guard: checked / removed** sums the `grounding_guard` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Gemini response recorded by `npm run record -- gemini` and replayed offline. A real Gemini response (`npm run record -- gemini`) is kept in `fixtures/api/llm_gemini/` for the fallback tests; with the English-only prompt it is English and passes the guard (Gemini's first, pre-fix answer was Hinglish and is kept inline in the tests as a rejection case). The launch-kit rewrite is Gemini first: mock mode replays the Gemini recording, then Groq's, with the same echo rule (80%+ unchanged lines = failure). gpt-oss-20b returned its input unchanged in all three of its recordings.
+- **Guard: checked / removed** sums the `grounding_guard` trace span: every v2 plan's ad copy and outreach, plus the launch-kit rewrite when an LLM wrote it. In eval only the demo brief has a rewrite: a real Gemini response recorded by `npm run record -- gemini`, kept in `fixtures/api/llm_gemini/` and replayed offline. With the English-only prompt it is English and passes the guard (Gemini's first, pre-fix answer was Hinglish and is kept inline in the tests as a rejection case). The launch-kit rewrite is Gemini first: mock mode replays the Gemini recording, then Groq's, with the same echo rule (80%+ unchanged lines = failure). gpt-oss-20b returned its input unchanged in all three of its recordings.
 - **Ad copy + outreach scripts** are the template scripts (no LLM in eval). Since M4 they contain no invented offers or numbers: the owner fills `{{offer}}` / `{{price}}`. Before the fix they traced 74% in v1 (168/227) because of lines like "10% off on 3+ packs".
 - **English-only lines** checks every kit, copy and outreach line with `isEnglishText` (no Indic script, no Hinglish function words). The form's language describes the audience only.
+
+## Limitations
+
+- **Synthetic training data.** The XGBoost scorer was trained on generated briefs, so TreeSHAP explains the generator's rules, not the Indian ad market. Additivity proves the explanation is exact for the model, not that the model is right. Real results (M6 actuals loop) are the fix.
+- **Mock data, not live data.** Every signal here comes from `fixtures/api/`. The Places, YouTube and PageSpeed fixtures are recorded real responses; the **Meta reach fixture is still hand-written** until a Meta token exists and `npm run record -- meta` replaces it.
+- **Mix diversity is unchanged** from v1 (same scorer, same picks). v2 changes prices, ranges, timing, words and verdicts, not which channels win.
+- **Impressions can dip as the budget rises** (12 / 20 briefs are monotone): when a budget unlocks more channels or a pricier channel, the mix gets broader and total impressions can fall. Reported, not gated.
+- **Ranges are a default band** (±30%, ±15% when Meta-backed), not calibrated intervals. Calibration needs real actuals (M6).
+- **Category labels are a regression floor.** The 20 golden briefs were labelled while fixing the recognizer; there is no held-out set.
+- **Almost no LLM in eval.** Only the demo brief replays one recorded Gemini rewrite, so grounding and English-only mostly measure the templates and the guard, not live LLM behaviour.
+- **Latency is offline.** Production adds the 4s scrape and up to 5s per live source (in parallel); PageSpeed is deferred and not counted.
