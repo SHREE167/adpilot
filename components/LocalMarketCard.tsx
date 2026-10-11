@@ -20,8 +20,8 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
     const noKey = /no API key/.test(signal.reason || "");
     return (
       <div className="story-bit max-w-3xl">
-        <h2 className="display text-5xl leading-[0.95] sm:text-7xl">Who else is on the map?</h2>
-        <p className="mt-8 flex flex-wrap items-center gap-3 text-xl text-fog">
+        <h2 className="display text-3xl leading-[0.95] sm:text-4xl">Who else is on the map?</h2>
+        <p className="mt-8 flex flex-wrap items-center gap-3 text-lg text-fog">
           <ProvenanceBadge signal={signal} />
           {noKey
             ? `Add GOOGLE_PLACES_API_KEY to see who else in ${city} sells this, and whether you are on Google Maps.`
@@ -35,7 +35,7 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
 
   return (
     <>
-      <h2 className="story-bit display max-w-[18ch] text-5xl leading-[0.95] sm:text-7xl">
+      <h2 className="story-bit display max-w-[18ch] text-3xl leading-[0.95] sm:text-4xl">
         {m.count > 0 ? (
           <>
             <span className="num text-sand">{countLabel(m)}</span> similar{" "}
@@ -45,7 +45,7 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
           <>No &ldquo;{m.keyword}&rdquo; listings found in {city}.</>
         )}
       </h2>
-      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-xl text-fog">
+      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-lg text-fog">
         <span>&ldquo;{m.query}&rdquo;</span>
         {m.avgRating !== null ? (
           <span>
@@ -57,12 +57,12 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
       </p>
 
       <div
-        className={`story-bit card mt-12 max-w-3xl border p-6 sm:p-8 ${m.own.found ? "border-mint/30" : "border-sand/40"}`}
+        className={`story-bit card mt-8 max-w-3xl border p-6 sm:p-8 ${m.own.found ? "border-mint/30" : "border-sand/40"}`}
       >
         {m.own.found ? (
           <>
-            <p className="text-sm uppercase tracking-[0.22em] text-mint">You are on Google Maps</p>
-            <p className="display mt-3 text-3xl">{m.own.name}</p>
+            <p className="text-sm font-semibold text-mint">You are on Google Maps</p>
+            <p className="display mt-3 text-xl">{m.own.name}</p>
             {m.own.mapsUri ? (
               <a
                 href={m.own.mapsUri}
@@ -76,8 +76,8 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
           </>
         ) : (
           <>
-            <p className="text-sm uppercase tracking-[0.22em] text-sand">Not on Google Maps</p>
-            <p className="display mt-3 text-3xl leading-tight">
+            <p className="text-sm font-semibold text-sand">Not on Google Maps</p>
+            <p className="display mt-3 text-xl leading-tight">
               People searching &ldquo;{m.keyword}&rdquo; in {city} cannot find you.
             </p>
             <p className="mt-4 text-fog">
@@ -97,8 +97,8 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
       </div>
 
       {m.top.length ? (
-        <div className="story-bit mt-12 max-w-3xl">
-          <h3 className="flex flex-wrap items-center gap-3 text-xl">
+        <div className="story-bit mt-8 max-w-3xl">
+          <h3 className="flex flex-wrap items-center gap-3 text-lg">
             Best rated nearby <ProvenanceBadge signal={signal} />
           </h3>
           <ol className="mt-4 divide-y divide-rule">
@@ -124,7 +124,7 @@ export function LocalMarketCard({ signal, city }: { signal: Signal<LocalMarket>;
         </div>
       ) : null}
 
-      <p className="story-bit mt-10 max-w-3xl text-sm text-fog">
+      <p className="story-bit mt-6 max-w-3xl text-sm text-fog">
         First page of Google Places results (up to 20). Only public business names and ratings are
         kept; ranked by rating among places with 10+ reviews.
       </p>

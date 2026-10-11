@@ -15,33 +15,21 @@ export function Nav() {
   const path = usePathname();
   return (
     <header className="nav-glass sticky top-0 z-40">
-      <div className="mx-auto flex max-w-[90rem] items-center justify-between gap-4 px-6 py-4 sm:px-12">
+      <div className="page flex flex-wrap items-center justify-between gap-3 py-3">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-sand text-sm font-black text-on-sand">
-            AP
-          </span>
-          <span>
-            <span className="display block text-lg leading-none">AdPilot</span>
-            <span className="mt-1 block text-[10px] uppercase tracking-[0.22em] text-sand">
-              India · ledger · ESTIMATE
-            </span>
-          </span>
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-sand text-xs font-bold text-on-sand">AP</span>
+          <span className="display text-lg leading-none">AdPilot</span>
+          <span className="hidden text-sm text-fog sm:inline">India media plans, estimated</span>
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-sm">
+        <nav className="flex flex-wrap items-center gap-1 text-sm" aria-label="Main">
           {LINKS.map((l) => {
-            const active =
-              l.href === "/"
-                ? path === "/"
-                : path === l.href || path.startsWith(`${l.href}/`);
+            const active = l.href === "/" ? path === "/" : path === l.href || path.startsWith(`${l.href}/`);
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-full px-3 py-1.5 ${
-                  active
-                    ? "border border-sand/40 bg-sand/10 text-sand"
-                    : "text-fog hover:text-paper"
-                }`}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-lg px-3 py-1.5 ${active ? "bg-tint text-paper" : "text-fog hover:text-paper"}`}
               >
                 {l.label}
               </Link>

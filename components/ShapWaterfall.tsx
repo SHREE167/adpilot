@@ -46,7 +46,7 @@ export function ShapWaterfall({ shap, note }: { shap: ChannelShap; note: string 
   const shown = Math.round(Math.max(0, Math.min(100, shap.prediction)));
 
   return (
-    <details className="story-bit group mt-10 max-w-3xl rounded-2xl border border-rule bg-surface/60 open:shadow-[var(--shadow)]">
+    <details className="story-bit group mt-6 max-w-3xl rounded-2xl border border-rule bg-surface/60 open:shadow-[var(--shadow)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-lg [&::-webkit-details-marker]:hidden">
         <span>Why this channel?</span>
         <span aria-hidden className="text-sand transition-transform group-open:rotate-45 motion-reduce:transition-none">

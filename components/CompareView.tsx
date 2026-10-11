@@ -117,15 +117,15 @@ export function CompareView() {
   }, [a, b]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-6 py-16 sm:px-12">
-      <header>
+    <div className="page space-y-6 py-12 sm:py-16">
+      <header className="section-head !mb-2">
         <p className="kicker">Side by side</p>
-        <h1 className="mt-2 text-3xl font-semibold">Compare plans</h1>
-        <p className="mt-2 text-sm text-fog">
+        <h1 className="display mt-2 text-3xl sm:text-4xl">Compare plans</h1>
+        <p className="mx-auto mt-3 text-sm text-fog">
           Query: <span className="num">/compare?a=&amp;b=</span>. Figures remain ESTIMATE.
         </p>
       </header>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="mx-auto grid max-w-[960px] gap-4 sm:grid-cols-2">
         {(["a", "b"] as const).map((side) => (
           <label key={side} className="field">
             <span>Plan {side.toUpperCase()}</span>
@@ -146,7 +146,7 @@ export function CompareView() {
       {overlap.length ? (
         <p className="text-xs text-fog">Shared channels: {overlap.join(", ")}</p>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid-2">
         <Side plan={a} />
         <Side plan={b} />
       </div>

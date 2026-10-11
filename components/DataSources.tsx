@@ -13,7 +13,7 @@ const STATUS_TONE: Record<Signal<unknown>["status"], string> = {
 export function DataSources({ plan }: { plan: PlanResult }) {
   if (!plan.planVersion || !plan.enrichment) {
     return (
-      <section className="mx-auto max-w-5xl px-6 pb-16 pt-8 sm:px-12">
+      <section className="page pb-16 pt-8">
         <div className="card p-6 text-sm text-fog sm:p-8">
           <h2 className="display text-2xl text-paper">Data sources</h2>
           <p className="mt-3 max-w-2xl">
@@ -31,7 +31,7 @@ export function DataSources({ plan }: { plan: PlanResult }) {
   const spans = plan.trace?.spans ?? [];
 
   return (
-    <section id="sources" className="mx-auto max-w-5xl px-6 pb-16 pt-8 sm:px-12">
+    <section id="sources" className="page pb-16 pt-8">
       <div className="card p-6 sm:p-8">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="display text-2xl sm:text-3xl">Data sources</h2>

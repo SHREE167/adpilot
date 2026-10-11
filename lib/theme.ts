@@ -1,17 +1,20 @@
 import { CHANNEL_COLORS } from "./colors";
 import type { ChannelId } from "./types";
 
-/** Ledger theme: client-safe helpers for the light/dark toggle and chart colours. */
+/** Midnight Pro theme: client-safe helpers for the dark/light toggle and chart colours. */
 
 export type ThemeName = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "adpilot.theme";
 
+/** Dark is AdPilot's identity; light is the variant behind the toggle. */
+export const DEFAULT_THEME: ThemeName = "dark";
+
 /**
- * Runs in <head> before paint: stored choice, else the OS preference.
+ * Runs in <head> before paint: stored choice, else dark.
  * localStorage can throw (privacy mode, blocked storage), hence try/catch.
  */
-export const THEME_INIT_SCRIPT = `(function(){var t;try{t=localStorage.getItem("${THEME_STORAGE_KEY}")}catch(e){}if(t!=="light"&&t!=="dark"){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)})();`;
+export const THEME_INIT_SCRIPT = `(function(){var t;try{t=localStorage.getItem("${THEME_STORAGE_KEY}")}catch(e){}if(t!=="light"&&t!=="dark"){t="${DEFAULT_THEME}"}document.documentElement.setAttribute("data-theme",t)})();`;
 
 /** Mirrors the CSS variables in app/globals.css (tests/theme.test.ts keeps them in sync). */
 export const THEME_PALETTE: Record<
@@ -19,9 +22,13 @@ export const THEME_PALETTE: Record<
   {
     bg: string;
     surface: string;
+    /** quiet fills (bands, active nav) */
+    tint: string;
     text: string;
     muted: string;
     rule: string;
+    /** input borders, >= 3:1 on the card */
+    ruleStrong: string;
     accent: string;
     good: string;
     bad: string;
@@ -30,29 +37,33 @@ export const THEME_PALETTE: Record<
     series: [string, string, string];
   }
 > = {
-  light: {
-    bg: "#fbf7ef",
-    surface: "#ffffff",
-    text: "#1c1917",
-    muted: "#57534e",
-    rule: "#e7dfd2",
-    accent: "#a3460f",
-    good: "#0f6b5c",
-    bad: "#b42318",
-    mock: "#4338ca",
-    series: ["#1d4ed8", "#0f6b5c", "#a3460f"],
-  },
   dark: {
-    bg: "#17130f",
-    surface: "#211c17",
-    text: "#f5efe6",
-    muted: "#b8aea2",
-    rule: "#3a332b",
-    accent: "#f0a35e",
-    good: "#5cc8ae",
-    bad: "#f7877a",
-    mock: "#a5b4fc",
-    series: ["#93b4ff", "#5cc8ae", "#f0a35e"],
+    bg: "#0a0a0b",
+    surface: "#131316",
+    tint: "#1a1a1f",
+    text: "#ededef",
+    muted: "#a0a0ab",
+    rule: "#25252b",
+    ruleStrong: "#64646f",
+    accent: "#9d8cff",
+    good: "#3ddc97",
+    bad: "#ff7a7a",
+    mock: "#7dd3fc",
+    series: ["#9d8cff", "#3ddc97", "#f7b955"],
+  },
+  light: {
+    bg: "#fafafa",
+    surface: "#ffffff",
+    tint: "#f2f2f5",
+    text: "#0a0a0b",
+    muted: "#55555f",
+    rule: "#e6e6ea",
+    ruleStrong: "#8b8b96",
+    accent: "#5b45e0",
+    good: "#047857",
+    bad: "#c0262d",
+    mock: "#0369a1",
+    series: ["#5b45e0", "#047857", "#b45309"],
   },
 };
 

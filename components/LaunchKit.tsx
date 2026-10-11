@@ -39,9 +39,9 @@ function Checklist({ items, id }: { items: string[]; id: string }) {
 function ChannelKit({ c, L, signals }: { c: KitChannel; L: Record<string, string>; signals: Signal<unknown>[] }) {
   const used = signals.filter((s) => c.sources.includes(s.source));
   return (
-    <article className="story-bit border-t border-rule pt-8">
-      <h3 className="display text-4xl leading-tight sm:text-5xl">{c.name}</h3>
-      <p className="num mt-4 max-w-[70ch] text-lg leading-snug text-sand">{c.headline}</p>
+    <article className="story-bit card panel">
+      <h3 className="display text-2xl leading-tight">{c.name}</h3>
+      <p className="num mt-3 text-sm leading-snug text-sand">{c.headline}</p>
       <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-fog">
         <ProvenanceBadge estimate />
         {used.map((s) => (
@@ -49,67 +49,74 @@ function ChannelKit({ c, L, signals }: { c: KitChannel; L: Record<string, string
         ))}
       </p>
 
-      <dl className="mt-8 grid gap-x-6 gap-y-5 text-lg sm:grid-cols-[9rem_1fr]">
-        <dt className="text-fog">{L.who}</dt>
-        <dd className="text-paper">
-          {c.targeting.text}
-          {c.targeting.spec ? (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-base text-sand underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">
-                {L.spec}
-              </summary>
-              <pre className="card mt-3 overflow-x-auto p-4 text-sm text-fog">{JSON.stringify(c.targeting.spec, null, 2)}</pre>
-            </details>
-          ) : null}
-        </dd>
-        <dt className="text-fog">{L.when}</dt>
-        <dd className="text-paper">{c.schedule.text}</dd>
-        <dt className="text-fog">{L.make}</dt>
-        <dd className="text-paper">{c.creatives.text}</dd>
+      <dl className="mt-6 grid gap-y-4 border-t border-rule pt-5">
+        <div>
+          <dt className="text-sm text-fog">{L.who}</dt>
+          <dd className="mt-1 text-paper">
+            {c.targeting.text}
+            {c.targeting.spec ? (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-sand underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">
+                  {L.spec}
+                </summary>
+                <pre className="card mt-3 overflow-x-auto p-4 text-xs text-fog">{JSON.stringify(c.targeting.spec, null, 2)}</pre>
+              </details>
+            ) : null}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm text-fog">{L.when}</dt>
+          <dd className="mt-1 text-paper">{c.schedule.text}</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-fog">{L.make}</dt>
+          <dd className="mt-1 text-paper">{c.creatives.text}</dd>
+        </div>
         {c.keywords.length ? (
-          <>
-            <dt className="text-fog">{L.keywords}</dt>
-            <dd className="flex flex-wrap gap-2">
+          <div>
+            <dt className="text-sm text-fog">{L.keywords}</dt>
+            <dd className="mt-2 flex flex-wrap gap-2">
               {c.keywords.map((k) => (
-                <span key={k} className="rounded-full border border-sand/30 bg-sand/10 px-3 py-1 text-sm text-sand">
+                <span key={k} className="rounded-md border border-sand/30 bg-sand/10 px-2.5 py-1 text-sm text-sand">
                   {k}
                 </span>
               ))}
             </dd>
-          </>
+          </div>
         ) : null}
-        <dt className="text-fog">{L.week}</dt>
-        <dd>
-          <Checklist items={c.checklist} id={c.channelId} />
-        </dd>
-        <dt className="text-fog">{L.watch}</dt>
-        <dd>
-          <p className="text-paper">{c.metric.name}</p>
-          <p className="mt-1 text-base text-fog">{c.metric.why}</p>
-        </dd>
+        <div>
+          <dt className="text-sm text-fog">{L.week}</dt>
+          <dd className="mt-2">
+            <Checklist items={c.checklist} id={c.channelId} />
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm text-fog">{L.watch}</dt>
+          <dd className="mt-1">
+            <p className="text-paper">{c.metric.name}</p>
+            <p className="mt-1 text-sm text-fog">{c.metric.why}</p>
+          </dd>
+        </div>
       </dl>
     </article>
   );
 }
 
-/** F7: the "Launch kit" chapter. */
+/** F7: the launch kit; the section title comes from the dashboard's section header. */
 export function LaunchKit({ kit, enrichment }: { kit: Kit; enrichment?: EnrichmentBundle }) {
   const L = LABELS;
   const signals = Object.values(enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const llm = kit.wording !== "template";
   return (
     <>
-      <h2 className="story-bit display max-w-[16ch] text-5xl leading-[0.95] sm:text-7xl">
-        What to set up on day one.
-      </h2>
-      <p className="story-bit mt-8 max-w-3xl text-xl text-fog">
-        {llm ? `Worded by ${kit.wording}. ` : "Template wording. Add GROQ_API_KEY (or a Gemini key) for plainer wording. "}
+      <p className="story-bit measure mx-auto text-center text-fog">
+        {llm ? `Worded by ${kit.wording}. ` : "Template wording. Add a Gemini or Groq key for plainer wording. "}
         {kit.guard.checked
           ? `The grounding guard checked ${kit.guard.checked} numbers against the plan and its data sources${kit.guard.removed ? ` and removed ${kit.guard.removed} it could not trace` : "; all traced"}.`
           : "Every number below comes from the plan or a data source."}
         {kit.guard.nonEnglish ? ` ${kit.guard.nonEnglish} reworded lines were not in English and were replaced with the template wording.` : ""}
       </p>
-      <div className="mt-12 max-w-3xl space-y-16">
+      <div className="grid-2 mt-8">
         {kit.channels.map((c) => (
           <ChannelKit key={c.channelId} c={c} L={L} signals={signals} />
         ))}

@@ -84,7 +84,7 @@ Add one line to the `runEnrichment({...})` task map. The `onSettled` callback al
 Add `<key>.json` files (named after `mockKey`, slugified) for city- or domain-specific demos. Mock mode must run with **no keys and no network**, and mock signals are badged MOCK, never LIVE. Once real keys work, record one real response per API as a fixture (strip anything personal).
 
 ### 5. UI (`components/<Name>Card.tsx`)
-- Use the **frontend-design** skill. Extend the glass/gold look (`.card`, `display` = Fraunces, Syne body, `text-sand`/`text-mint`/`text-fog`, story chapters in `Dashboard.tsx`). Do not redesign. Go mobile-first and respect reduced motion (`StoryScene` handles it).
+- Use the **frontend-design** skill. Extend the Midnight Pro look (`.card` + `.panel`, `display` = Geist, `num` = Geist Mono, `text-sand` (violet accent) / `text-mint` / `text-fog`). Place the card in a `grid-2` cell of a `StoryScene` section in `Dashboard.tsx` with a `SectionHead`; keep card type card-sized (titles `text-2xl`-`text-4xl`). Do not redesign. Go mobile-first (360px) and respect reduced motion (`StoryScene` handles it).
 - Put `<ProvenanceBadge signal={s} />` next to every number from the source, and `<ProvenanceBadge estimate />` next to anything derived or guessed. A number without a badge is a bug.
 - Handle `status !== "ok"` with a quiet, useful state (what is missing and how to connect it). Never show an error page.
 - Add a label to `SOURCE_LABELS` in `lib/sources.ts`, and add the chapter id to `chapterIds` in `Dashboard.tsx` only when the signal exists.

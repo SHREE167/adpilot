@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { MixPie, ImpressionsBar, WeeklyLine } from "@/components/Charts";
 import { DataSources } from "@/components/DataSources";
 import { EstimateBadge } from "@/components/EstimateBadge";
@@ -21,7 +21,7 @@ import { ZeroRupeeCard } from "@/components/ZeroRupeeCard";
 import { channelColors } from "@/lib/theme";
 import { compactNumber, ctrPct, inr, pct } from "@/lib/format";
 import { planToMarkdown } from "@/lib/markdown";
-import type { PlacementPick, PlanResult, Signal } from "@/lib/types";
+import type { PlanResult, Signal } from "@/lib/types";
 
 const KIND_LABEL: Record<string, string> = {
   google_site: "Google site (GDN)",
@@ -32,40 +32,25 @@ const KIND_LABEL: Record<string, string> = {
   format: "Format / inventory",
 };
 
-function PlacementScene({ p }: { p: PlacementPick }) {
+/** Centered section header: chapter number, title, optional one-line subtitle. */
+function SectionHead({ n, of, title, sub }: { n: string; of: string; title: string; sub?: ReactNode }) {
   return (
-    <StoryScene className="story-chapter">
-      <p className="story-bit kicker">{KIND_LABEL[p.kind] || p.kind}</p>
-      <h2 className="story-bit display mt-4 max-w-[16ch] text-5xl leading-[0.92] sm:text-7xl">
-        {p.name}
-      </h2>
-      <p className="story-bit num mt-8 text-2xl text-sand sm:text-4xl">{p.target}</p>
-      <p className="story-bit mt-8 max-w-3xl text-2xl leading-snug text-fog">{p.why}</p>
-      <p className="story-bit mt-6 text-xl">
-        Do this: <span className="text-paper">{p.action}</span>
+    <header className="section-head">
+      <p className="story-bit kicker num">
+        {n} / {of}
       </p>
-      <p className="story-bit mt-4 text-fog">
-        Parent channel: {p.channelName} · fit {p.fit}
-      </p>
-    </StoryScene>
+      <h2 className="story-bit display">{title}</h2>
+      {sub ? <p className="story-bit sub">{sub}</p> : null}
+    </header>
   );
 }
 
-function Chapter({
-  n,
-  of,
-  title,
-}: {
-  n: string;
-  of: string;
-  title: string;
-}) {
+/** A grid cell that spans both columns when its partner is missing. */
+function Cell({ id, alone, children }: { id?: string; alone?: boolean; children: ReactNode }) {
   return (
-    <p className="story-bit kicker mb-6">
-      {n} / {of}
-      <span className="mx-3 text-fog">—</span>
-      {title}
-    </p>
+    <div id={id} className={`card panel scroll-mt-24 ${alone ? "span-all" : ""}`}>
+      {children}
+    </div>
   );
 }
 
@@ -103,30 +88,29 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
   const signals = Object.values(plan.enrichment || {}).filter((s): s is Signal<unknown> => Boolean(s));
   const reality = plan.realityCheck;
   const shapBy = new Map((plan.shap?.channels || []).map((c) => [c.channelId, c]));
-  const chapterIds = [
+  const placements = plan.placements || [];
+  const kit = plan.launchKit?.channels.length ? plan.launchKit : undefined;
+
+  const hasCheck = Boolean(reality || readiness);
+  const hasStreet = Boolean((localMarket && showLocal) || creators);
+  const hasWhoWhen = Boolean(audience || calendar);
+  const sectionIds = [
     "cover",
-    reality ? "reality" : null,
+    hasCheck ? "check" : null,
     plan.product ? "read" : null,
-    readiness ? "ready" : null,
-    showLocal ? "local" : null,
-    audience ? "reach" : null,
-    creators ? "voices" : null,
+    hasStreet ? "street" : null,
+    hasWhoWhen ? "who" : null,
     zeroRupee.length ? "free" : null,
-    calendar ? "timing" : null,
-    "numbers",
     "mix",
-    (plan.placements || []).length ? "post" : null,
-    plan.launchKit?.channels.length ? "kit" : null,
     "charts",
+    placements.length ? "post" : null,
+    kit ? "kit" : null,
     "cuts",
     "ads",
     "outreach",
   ].filter((id): id is string => Boolean(id));
   const pad = (n: number) => String(n).padStart(2, "0");
-  const chapter = (id: string) => ({
-    n: pad(chapterIds.indexOf(id) + 1),
-    of: pad(chapterIds.length),
-  });
+  const chapter = (id: string) => ({ n: pad(sectionIds.indexOf(id) + 1), of: pad(sectionIds.length) });
 
   const cpa = plan.totals.estimatedCpa;
   const kpis = useMemo(
@@ -134,46 +118,50 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
       { label: "Spend", value: plan.totals.budget, format: inr },
       { label: "Impressions", value: plan.totals.impressions, format: compactNumber },
       { label: "Clicks", value: plan.totals.clicks, format: compactNumber },
-      { label: "Reach", value: plan.totals.reach, format: compactNumber },
-      {
-        label: "Conversions",
-        value: plan.totals.conversions,
-        format: (n: number) => n.toFixed(1),
-      },
-      {
-        label: "CPA",
-        value: cpa ?? 0,
-        format: (n: number) => (cpa ? inr(n) : "—"),
-      },
+      { label: "Conversions", value: plan.totals.conversions, format: (n: number) => n.toFixed(1) },
     ],
-    [plan.totals, cpa]
+    [plan.totals]
   );
 
   return (
     <div className="story-reel">
-      <nav className="story-dots hidden lg:flex">
-        {[...chapterIds, "sources"].map((id, i) => (
+      <nav className="story-dots hidden xl:flex" aria-label="Sections">
+        {[...sectionIds, "sources"].map((id, i) => (
           <a key={id} href={`#${id}`} className="story-dot" title={id}>
-            {String(i + 1).padStart(2, "0")}
+            {pad(i + 1)}
           </a>
         ))}
       </nav>
 
       <PlanHealth plan={plan} speed={speed} />
 
-      <StoryScene id="cover" className="story-chapter">
-        <Chapter {...chapter("cover")} title="Cover" />
+      {/* Hero: centered headline, subtitle and the key numbers. */}
+      <StoryScene id="cover" className="story-chapter hero">
         <p className="story-bit kicker">A plan for {plan.input.city}</p>
-        <h1 className="story-bit display mt-4 max-w-[18ch] text-6xl leading-[0.9] sm:text-8xl">
-          {name}
-        </h1>
-        <p className="story-bit mt-8 max-w-2xl text-xl leading-relaxed text-fog sm:text-2xl">
-          {inr(plan.input.budget)} a month · {plan.input.goal} · {plan.category}/
-          {plan.priceTier} · {plan.input.language}-speaking audience
+        <h1 className="story-bit display">{name}</h1>
+        <p className="story-bit sub">
+          {inr(plan.input.budget)} a month · {plan.input.goal} · {plan.category}/{plan.priceTier} ·{" "}
+          {plan.input.language}-speaking audience
         </p>
-        <div className="story-bit mt-10 flex flex-wrap gap-3">
-          <EstimateBadge />
-          <button className="btn btn-ghost" type="button" onClick={exportMd}>
+        <dl id="numbers" className="story-bit kpi-grid mt-10 scroll-mt-24">
+          {kpis.map((k) => (
+            <div key={k.label} className="card kpi">
+              <dt>
+                {k.label} <EstimateBadge />
+              </dt>
+              <dd className="num">
+                <CountUp value={k.value} format={k.format} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="story-bit mt-4 text-sm text-fog">
+          Reach <span className="num text-paper">{compactNumber(plan.totals.reach)}</span> · CPA{" "}
+          <span className="num text-paper">{cpa ? inr(cpa) : "—"}</span> · mix sums to{" "}
+          <span className="num text-paper">{inr(mixSum)}</span>. {plan.disclaimer}
+        </p>
+        <div className="story-bit mt-8 flex flex-wrap justify-center gap-3">
+          <button className="btn btn-primary" type="button" onClick={exportMd}>
             Export markdown
           </button>
           <button className="btn btn-ghost" type="button" onClick={copyMd}>
@@ -183,252 +171,242 @@ export function Dashboard({ plan }: { plan: PlanResult }) {
             Compare
           </Link>
         </div>
-        <p className="story-bit mt-16 text-sm uppercase tracking-[0.3em] text-sand">
-          Scroll the story ↓
-        </p>
       </StoryScene>
 
-      {reality ? (
-        <StoryScene id="reality" className="story-chapter">
-          <Chapter {...chapter("reality")} title="Can this pay for itself?" />
-          <RealityCard rc={reality} hasFreeActions={zeroRupee.length > 0} />
+      {hasCheck ? (
+        <StoryScene id="check" className="story-chapter">
+          <SectionHead {...chapter("check")} title="Before the first rupee" />
+          <div className="grid-2">
+            {reality ? (
+              <Cell id="reality" alone={!readiness}>
+                <RealityCard rc={reality} hasFreeActions={zeroRupee.length > 0} />
+              </Cell>
+            ) : null}
+            {readiness ? (
+              <Cell id="ready" alone={!reality}>
+                <ReadinessCard
+                  signal={readiness}
+                  domain={plan.site?.domain || plan.input.domain}
+                  speed={speed.signal}
+                  speedPending={speed.pending}
+                  speedStartedAt={speed.startedAt}
+                />
+              </Cell>
+            ) : null}
+          </div>
         </StoryScene>
       ) : null}
 
       {plan.product ? (
         <StoryScene id="read" className="story-chapter">
-          <Chapter {...chapter("read")} title="We read the product" />
-          <h2 className="story-bit display text-5xl leading-[0.95] sm:text-7xl">
-            {plan.product.recognizedName}
-          </h2>
-          <p className="story-bit mt-6 text-lg uppercase tracking-[0.18em] text-sand">
-            {plan.product.source} · {Math.round(plan.product.confidence * 100)}% confidence ·{" "}
-            {plan.product.tone}
-          </p>
-          <p className="story-bit mt-8 max-w-3xl text-2xl leading-snug text-fog">
-            {plan.product.summary}
-          </p>
-          <div className="story-bit mt-10 flex flex-wrap gap-3">
-            {(plan.product.differentiators || []).map((d) => (
-              <span
-                key={d}
-                className="rounded-full border border-sand/30 bg-sand/10 px-5 py-2 text-sm text-sand"
-              >
-                {d}
-              </span>
-            ))}
+          <SectionHead {...chapter("read")} title="We read the product" />
+          <div className="card panel mx-auto max-w-3xl">
+            <h3 className="story-bit display text-2xl sm:text-3xl">{plan.product.recognizedName}</h3>
+            <p className="story-bit mt-2 text-sm text-fog">
+              {plan.product.source} · {Math.round(plan.product.confidence * 100)}% confidence · {plan.product.tone}
+            </p>
+            <p className="story-bit mt-5 text-lg leading-relaxed text-paper">{plan.product.summary}</p>
+            {(plan.product.differentiators || []).length ? (
+              <div className="story-bit mt-6 flex flex-wrap gap-2">
+                {plan.product.differentiators.map((d) => (
+                  <span key={d} className="rounded-md border border-sand/30 bg-sand/10 px-3 py-1 text-sm text-sand">
+                    {d}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {(plan.product.evidence || []).length ? (
+              <ul className="story-bit mt-6 space-y-2 border-t border-rule pt-5 text-sm text-fog">
+                {plan.product.evidence.map((e) => (
+                  <li key={e}>↳ {e}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-          <ul className="story-bit mt-12 max-w-3xl space-y-3 text-lg text-fog">
-            {(plan.product.evidence || []).map((e) => (
-              <li key={e}>↳ {e}</li>
-            ))}
-          </ul>
         </StoryScene>
       ) : null}
 
-      {readiness ? (
-        <StoryScene id="ready" className="story-chapter">
-          <Chapter {...chapter("ready")} title="Before the first rupee" />
-          <ReadinessCard
-            signal={readiness}
-            domain={plan.site?.domain || plan.input.domain}
-            speed={speed.signal}
-            speedPending={speed.pending}
-            speedStartedAt={speed.startedAt}
-          />
+      {hasStreet ? (
+        <StoryScene id="street" className="story-chapter">
+          <SectionHead {...chapter("street")} title="Your street" sub="Who already sells this near you, and who already talks to your buyers." />
+          <div className="grid-2">
+            {localMarket && showLocal ? (
+              <Cell id="local" alone={!creators}>
+                <LocalMarketCard signal={localMarket} city={plan.input.city} />
+              </Cell>
+            ) : null}
+            {creators ? (
+              <Cell id="voices" alone={!(localMarket && showLocal)}>
+                <CreatorsCard signal={creators} city={plan.input.city} />
+              </Cell>
+            ) : null}
+          </div>
         </StoryScene>
       ) : null}
 
-      {localMarket && showLocal ? (
-        <StoryScene id="local" className="story-chapter">
-          <Chapter {...chapter("local")} title="Your street" />
-          <LocalMarketCard signal={localMarket} city={plan.input.city} />
-        </StoryScene>
-      ) : null}
-
-      {audience ? (
-        <StoryScene id="reach" className="story-chapter">
-          <Chapter {...chapter("reach")} title="Who you can reach" />
-          <AudienceCard signal={audience} city={plan.input.city} mix={plan.mix} />
-        </StoryScene>
-      ) : null}
-
-      {creators ? (
-        <StoryScene id="voices" className="story-chapter">
-          <Chapter {...chapter("voices")} title="Local voices" />
-          <CreatorsCard signal={creators} city={plan.input.city} />
+      {hasWhoWhen ? (
+        <StoryScene id="who" className="story-chapter">
+          <SectionHead {...chapter("who")} title="Who and when" />
+          <div className="grid-2">
+            {audience ? (
+              <Cell id="reach" alone={!calendar}>
+                <AudienceCard signal={audience} city={plan.input.city} mix={plan.mix} />
+              </Cell>
+            ) : null}
+            {calendar ? (
+              <Cell id="timing" alone={!audience}>
+                <TimingCard signal={calendar} city={plan.input.city} />
+              </Cell>
+            ) : null}
+          </div>
         </StoryScene>
       ) : null}
 
       {zeroRupee.length ? (
         <StoryScene id="free" className="story-chapter">
-          <Chapter {...chapter("free")} title="Before you spend anything" />
+          <SectionHead {...chapter("free")} title="Before you spend anything" />
           <ZeroRupeeCard items={zeroRupee} signals={signals} />
         </StoryScene>
       ) : null}
 
-      {calendar ? (
-        <StoryScene id="timing" className="story-chapter">
-          <Chapter {...chapter("timing")} title="Timing" />
-          <TimingCard signal={calendar} city={plan.input.city} />
-        </StoryScene>
-      ) : null}
-
-      <StoryScene id="numbers" className="story-chapter">
-        <Chapter {...chapter("numbers")} title="The estimate" />
-        <h2 className="story-bit display mb-16 text-5xl sm:text-7xl">What ₹ buys.</h2>
-        <div className="grid gap-16">
-          {kpis.map((k) => (
-            <div key={k.label} className="story-bit border-t border-rule pt-8">
-              <p className="text-sm uppercase tracking-[0.22em] text-sand">
-                {k.label} <EstimateBadge className="ml-2" />
+      <StoryScene id="mix" className="story-chapter">
+        <SectionHead
+          {...chapter("mix")}
+          title={`${plan.mix.length} channels, ${inr(mixSum)}`}
+          sub="Each channel's share of the month, why it is here, and what the model weighed."
+        />
+        <div className="tiles">
+          {plan.mix.map((row) => (
+            <a key={row.channelId} href={`#ch-${row.channelId}`} className="story-bit card kpi hover:border-sand">
+              <p className="flex items-center gap-2 text-paper">
+                <span aria-hidden className="h-3 w-3 shrink-0 rounded-full" style={{ background: swatch[row.channelId] }} />
+                {row.name}
               </p>
-              <p className="num display mt-3 text-6xl leading-none text-paper sm:text-8xl">
-                <CountUp value={k.value} format={k.format} />
+              <p className="display num mt-3 text-4xl leading-none text-sand">
+                <CountUp value={row.percent} format={(n) => pct(n, 0)} />
               </p>
-            </div>
+              <p className="num mt-2 text-paper">{inr(row.budget)}</p>
+            </a>
           ))}
         </div>
-        <p className="story-bit mt-16 max-w-2xl text-fog">
-          {plan.disclaimer} Mix sums to {inr(mixSum)}.
-        </p>
+        <div className="grid-2 mt-6">
+          {plan.mix.map((row) => (
+            <article key={row.channelId} id={`ch-${row.channelId}`} className="story-bit card panel scroll-mt-24">
+              <h3 className="flex items-center gap-2 text-xl text-paper">
+                <span aria-hidden className="h-3 w-3 rounded-full" style={{ background: swatch[row.channelId] }} />
+                {row.name}
+                <span className="num ml-auto text-base text-sand">
+                  {pct(row.percent, 0)} · {inr(row.budget)}
+                </span>
+              </h3>
+              <p className="mt-4 leading-relaxed text-fog">{row.explanation}</p>
+              <p className="num mt-4 text-sm text-fog">
+                Score {row.score} · {compactNumber(row.forecast.impressions)} impr. ·{" "}
+                {compactNumber(row.forecast.clicks)} clicks · CTR {ctrPct(row.forecast.ctr)}
+                {row.forecast.reachCapped ? " · reach capped to Meta pool" : ""}
+              </p>
+              {shapBy.get(row.channelId) ? (
+                <ShapWaterfall shap={shapBy.get(row.channelId)!} note={plan.shap!.note} />
+              ) : null}
+            </article>
+          ))}
+        </div>
       </StoryScene>
-
-      <div id="mix">
-        {plan.mix.map((row, i) => (
-          <StoryScene
-            key={row.channelId}
-            className="story-chapter"
-          >
-            <Chapter
-              {...chapter("mix")}
-              title={`Channel ${i + 1} of ${plan.mix.length}`}
-            />
-            <p className="story-bit inline-flex items-center gap-3 text-xl">
-              <span
-                className="h-4 w-4 rounded-full"
-                style={{ background: swatch[row.channelId] }}
-              />
-              {row.name}
-            </p>
-            <p className="story-bit display mt-4 text-[22vw] leading-[0.8] text-sand sm:text-[12rem]">
-              <CountUp value={row.percent} format={(n) => pct(n, 0)} />
-            </p>
-            <p className="story-bit num mt-2 text-4xl sm:text-6xl">
-              <CountUp value={row.budget} format={inr} />
-            </p>
-            <p className="story-bit mt-8 max-w-3xl text-2xl leading-snug text-fog">
-              {row.explanation}
-            </p>
-            <p className="story-bit mt-8 text-lg text-fog">
-              Score {row.score} · {compactNumber(row.forecast.impressions)} impr. ·{" "}
-              {compactNumber(row.forecast.clicks)} clicks · CTR {ctrPct(row.forecast.ctr)}
-            </p>
-            {shapBy.get(row.channelId) ? (
-              <ShapWaterfall shap={shapBy.get(row.channelId)!} note={plan.shap!.note} />
-            ) : null}
-          </StoryScene>
-        ))}
-      </div>
-
-      {(plan.placements || []).length ? (
-        <div id="post">
-          <StoryScene className="story-chapter">
-            <Chapter {...chapter("post")} title="Where to actually post" />
-            <h2 className="story-bit display max-w-[14ch] text-5xl leading-[0.92] sm:text-7xl">
-              Not “Google”. These sites and apps.
-            </h2>
-            <p className="story-bit mt-8 max-w-3xl text-2xl text-fog">
-              Generic platforms are useless as a brief. Add these as managed
-              placements, apps, or keyword themes. ESTIMATE inventory — we do
-              not log into Google Ads.
-            </p>
-          </StoryScene>
-          {(plan.placements || []).map((p) => (
-            <PlacementScene key={`${p.channelId}-${p.target}`} p={p} />
-          ))}
-        </div>
-      ) : null}
-
-      {plan.launchKit?.channels.length ? (
-        <StoryScene id="kit" className="story-chapter">
-          <Chapter {...chapter("kit")} title="Launch kit" />
-          <LaunchKit kit={plan.launchKit} enrichment={plan.enrichment} />
-        </StoryScene>
-      ) : null}
 
       <StoryScene id="charts" className="story-chapter">
-        <Chapter {...chapter("charts")} title="The pictures" />
-        <h2 className="story-bit display mb-12 text-5xl sm:text-7xl">Mix, reach, weeks.</h2>
-        <div className="grid gap-10">
-          <div className="story-bit card p-6 sm:p-10">
-            <h3 className="mb-4 text-xl">Budget mix</h3>
+        <SectionHead {...chapter("charts")} title="Mix, reach, weeks" />
+        <div className="grid-2">
+          <div className="story-bit card panel">
+            <h3 className="mb-2 text-center text-fog">Budget mix</h3>
             <MixPie plan={plan} />
           </div>
-          <div className="story-bit card p-6 sm:p-10">
-            <h3 className="mb-4 text-xl">Impressions by channel</h3>
-            <ImpressionsBar plan={plan} />
-          </div>
-          <div className="story-bit card p-6 sm:p-10">
-            <h3 className="mb-4 text-xl">Weekly pacing</h3>
+          <div className="story-bit card panel">
+            <h3 className="mb-2 text-center text-fog">Weekly pacing</h3>
             <WeeklyLine plan={plan} />
+          </div>
+          <div className="story-bit card panel span-all">
+            <h3 className="mb-2 text-center text-fog">Impressions by channel</h3>
+            <ImpressionsBar plan={plan} />
           </div>
         </div>
       </StoryScene>
 
+      {placements.length ? (
+        <StoryScene id="post" className="story-chapter">
+          <SectionHead
+            {...chapter("post")}
+            title="Where to actually post"
+            sub="Not “Google”: these sites, apps and query themes. ESTIMATE inventory; we do not log into Google Ads."
+          />
+          <div className="grid-3">
+            {placements.map((p) => (
+              <article key={`${p.channelId}-${p.target}`} className="story-bit card panel">
+                <p className="text-sm text-sand">{KIND_LABEL[p.kind] || p.kind}</p>
+                <h3 className="display mt-2 text-xl leading-tight">{p.name}</h3>
+                <p className="num mt-3 break-words text-sm text-paper">{p.target}</p>
+                <p className="mt-3 text-sm leading-relaxed text-fog">{p.why}</p>
+                <p className="mt-3 text-sm">
+                  Do this: <span className="text-paper">{p.action}</span>
+                </p>
+                <p className="mt-3 text-xs text-fog">
+                  {p.channelName} · fit {p.fit}
+                </p>
+              </article>
+            ))}
+          </div>
+        </StoryScene>
+      ) : null}
+
+      {kit ? (
+        <StoryScene id="kit" className="story-chapter">
+          <SectionHead {...chapter("kit")} title="Launch kit: what to set up on day one" />
+          <LaunchKit kit={kit} enrichment={plan.enrichment} />
+        </StoryScene>
+      ) : null}
+
       <StoryScene id="cuts" className="story-chapter">
-        <Chapter {...chapter("cuts")} title="What we cut" />
-        <h2 className="story-bit display mb-12 text-5xl sm:text-7xl">Not these.</h2>
-        <ul className="space-y-12">
+        <SectionHead {...chapter("cuts")} title="What we cut" />
+        <ul className="grid-2">
           {plan.rejected.map((r) => (
-            <li key={r.channelId} className="story-bit border-t border-rule pt-8">
-              <p className="display text-4xl sm:text-5xl">
-                {r.name}{" "}
-                <span className="num text-2xl text-fog">({r.score})</span>
+            <li key={r.channelId} className="story-bit card panel">
+              <p className="display text-xl">
+                {r.name} <span className="num text-base text-fog">({r.score})</span>
               </p>
-              <p className="mt-3 text-xl text-fog">
-                {r.rejectReason || "Not selected in the 2–5 mix"}
-              </p>
-              <p className="mt-2 text-fog">{r.reasons.slice(0, 3).join(" · ")}</p>
+              <p className="mt-2 text-paper">{r.rejectReason || "Not selected in the 2–5 mix"}</p>
+              <p className="mt-2 text-sm text-fog">{r.reasons.slice(0, 3).join(" · ")}</p>
             </li>
           ))}
         </ul>
       </StoryScene>
 
-      <div id="ads">
-        {plan.adAngles.map((a, i) => (
-          <StoryScene key={a.headline} className="story-chapter">
-            <Chapter {...chapter("ads")} title={`Ad angle ${i + 1}`} />
-            <h2 className="story-bit display max-w-[16ch] text-5xl leading-[0.95] sm:text-7xl">
-              {a.headline}
-            </h2>
-            <p className="story-bit mt-10 max-w-3xl text-2xl leading-snug text-fog">
-              {a.primaryText}
-            </p>
-            <p className="story-bit mt-10">
-              <span className="rounded-full bg-sand px-6 py-3 text-lg font-bold text-on-sand">
-                {a.cta}
-              </span>
-            </p>
-            <p className="story-bit mt-6 text-fog">{a.channelHint}</p>
-          </StoryScene>
-        ))}
-      </div>
+      <StoryScene id="ads" className="story-chapter">
+        <SectionHead {...chapter("ads")} title="Ad angles" />
+        <div className="grid-3">
+          {plan.adAngles.map((a, i) => (
+            <article key={`${a.headline}-${i}`} className="story-bit card panel flex flex-col">
+              <h3 className="display text-2xl leading-tight">{a.headline}</h3>
+              <p className="mt-4 leading-relaxed text-fog">{a.primaryText}</p>
+              <p className="mt-auto pt-6">
+                <span className="inline-block rounded-md bg-sand px-4 py-2 text-sm font-semibold text-on-sand">{a.cta}</span>
+              </p>
+              <p className="mt-3 text-xs text-fog">{a.channelHint}</p>
+            </article>
+          ))}
+        </div>
+      </StoryScene>
 
-      <div id="outreach">
-        {plan.outreach.map((o, i) => (
-          <StoryScene key={`${o.channel}-${i}`} className="story-chapter">
-            <Chapter {...chapter("outreach")} title={`Script ${i + 1} of ${plan.outreach.length}`} />
-            <p className="story-bit text-xl uppercase tracking-[0.2em] text-mint">
-              {o.channel}
-            </p>
-            <h2 className="story-bit display mt-4 text-4xl sm:text-6xl">{o.title}</h2>
-            <pre className="story-bit mt-10 max-w-3xl whitespace-pre-wrap font-sans text-xl leading-relaxed text-fog">
-              {o.body}
-            </pre>
-          </StoryScene>
-        ))}
-      </div>
+      <StoryScene id="outreach" className="story-chapter">
+        <SectionHead {...chapter("outreach")} title="Outreach scripts" />
+        <div className="grid-2">
+          {plan.outreach.map((o, i) => (
+            <article key={`${o.channel}-${i}`} className="story-bit card panel">
+              <p className="text-sm text-mint">{o.channel}</p>
+              <h3 className="display mt-1 text-xl">{o.title}</h3>
+              <pre className="mt-4 whitespace-pre-wrap font-sans leading-relaxed text-fog">{o.body}</pre>
+            </article>
+          ))}
+        </div>
+      </StoryScene>
 
       <DataSources plan={plan} />
     </div>

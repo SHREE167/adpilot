@@ -20,8 +20,8 @@ export function AudienceCard({
     const noKey = /no API key/.test(signal.reason || "");
     return (
       <div className="story-bit max-w-3xl">
-        <h2 className="display text-5xl leading-[0.95] sm:text-7xl">How many people can you reach in {city}?</h2>
-        <p className="mt-8 flex flex-wrap items-center gap-3 text-xl text-fog">
+        <h2 className="display text-3xl leading-[0.95] sm:text-4xl">How many people can you reach in {city}?</h2>
+        <p className="mt-8 flex flex-wrap items-center gap-3 text-lg text-fog">
           <ProvenanceBadge signal={signal} />
           {noKey
             ? "Add META_ACCESS_TOKEN, META_AD_ACCOUNT_ID and META_API_VERSION (a system-user token with ads_read) to see Meta's real audience size. Until then, Facebook and Instagram reach is rate-card math only."
@@ -39,18 +39,18 @@ export function AudienceCard({
 
   return (
     <>
-      <h2 className="story-bit display max-w-[18ch] text-5xl leading-[0.95] sm:text-7xl">
+      <h2 className="story-bit display max-w-[18ch] text-3xl leading-[0.95] sm:text-4xl">
         <span className="num text-sand">
           {compactNumber(a.lower)} to {compactNumber(a.upper)}
         </span>{" "}
         people in {a.city.name} match this targeting.
       </h2>
-      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-xl text-fog">
+      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-lg text-fog">
         <span>Monthly Facebook + Instagram audience from Meta&rsquo;s reach estimate</span>
         <ProvenanceBadge signal={signal} />
       </p>
 
-      <dl className="story-bit mt-12 grid max-w-3xl grid-cols-[minmax(6rem,auto)_1fr] gap-x-6 gap-y-4 border-t border-rule pt-8 text-lg">
+      <dl className="story-bit mt-8 grid max-w-3xl grid-cols-[minmax(6rem,auto)_1fr] gap-x-6 gap-y-4 border-t border-rule pt-8 text-lg">
         <dt className="text-fog">Where</dt>
         <dd className="text-paper">
           {a.city.name}
@@ -71,7 +71,7 @@ export function AudienceCard({
       </dl>
 
       {metaRows.length ? (
-        <p className="story-bit mt-10 max-w-3xl text-lg text-fog">
+        <p className="story-bit mt-6 max-w-3xl text-lg text-fog">
           {capped.length ? (
             <>
               Your Facebook and Instagram reach forecast was cut to{" "}
@@ -89,7 +89,7 @@ export function AudienceCard({
         </p>
       ) : null}
 
-      <details className="story-bit mt-10 max-w-3xl">
+      <details className="story-bit mt-6 max-w-3xl">
         <summary className="cursor-pointer text-sand underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">
           Exact targeting spec (paste into Ads Manager or the API)
         </summary>

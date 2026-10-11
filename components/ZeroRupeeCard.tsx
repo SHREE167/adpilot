@@ -16,23 +16,23 @@ export function ZeroRupeeCard({
 
   return (
     <>
-      <h2 className="story-bit display max-w-[16ch] text-5xl leading-[0.95] sm:text-7xl">
+      <h2 className="story-bit display max-w-[16ch] text-3xl leading-[0.95] sm:text-4xl">
         Do these <span className="text-mint">free</span> first.
       </h2>
-      <p className="story-bit mt-6 max-w-2xl text-xl text-fog">
+      <p className="story-bit mt-6 max-w-2xl text-lg text-fog">
         {items.length === 1 ? "One move" : `${items.length} moves`} that cost ₹0 and make every paid
         rupee after them work harder.
       </p>
 
-      <ol className="mt-12 grid max-w-3xl gap-5">
+      <ol className="grid-2 mt-8">
         {items.map((item, i) => (
           <li key={item.id} className="story-bit card p-6 sm:p-8">
             <div className="grid grid-cols-[2.5rem_1fr] gap-x-3">
-              <span className="num display text-3xl leading-none text-sand" aria-hidden>
+              <span className="num display text-xl leading-none text-sand" aria-hidden>
                 {i + 1}
               </span>
               <div className="min-w-0">
-                <h3 className="display text-2xl leading-tight sm:text-3xl">{item.title}</h3>
+                <h3 className="display text-lg leading-tight sm:text-xl">{item.title}</h3>
                 <p className="mt-3 text-fog">{item.why}</p>
                 {item.sources.length ? (
                   <p className="mt-3 flex flex-wrap gap-2">

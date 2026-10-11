@@ -1,77 +1,55 @@
 @import "tailwindcss";
 
 /*
- * Ledger theme. Warm paper + ink + turmeric; 1px rules instead of glass.
- * Token names are historical (ink = page background, paper = main text) so
- * existing utilities (text-paper, text-fog, text-sand...) keep working.
- * Every text pair is WCAG AA (>= 4.5:1) on both bg and surface; input
- * borders are >= 3:1. Checked in tests/theme.test.ts.
+ * Midnight Pro theme. Dark is the identity (near-black, quiet grey cards, one
+ * electric violet); light is the variant behind the toggle.
+ * Token names are historical (ink = page background, paper = main text,
+ * sand = accent) so existing utilities (text-paper, text-fog, text-sand...) keep working.
+ * Every text pair is WCAG AA (>= 4.5:1) on page, card and tint; input borders
+ * and chart marks are >= 3:1. Checked in tests/theme.test.ts.
  */
 :root,
-:root[data-theme="light"] {
-  color-scheme: light;
-  --ink: #fbf7ef; /* page background */
-  --surface: #ffffff; /* cards */
-  --tint: #f5efe4; /* quiet fills, bands */
-  --paper: #1c1917; /* main text */
-  --fog: #57534e; /* muted text */
-  --sand: #a3460f; /* turmeric accent */
-  --on-sand: #ffffff;
-  --mint: #0f6b5c; /* good / live */
-  --danger: #b42318; /* fail */
-  --ice: #4338ca; /* mock */
-  --rule: #e7dfd2; /* hairlines */
-  --rule-strong: #8a8175; /* input borders */
-  --line: rgba(163, 70, 15, 0.28);
-  --shadow: 0 1px 0 rgba(28, 25, 23, 0.04), 0 18px 40px -24px rgba(28, 25, 23, 0.28);
-  --watermark: rgba(163, 70, 15, 0.05);
-}
-
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ink: #17130f;
-  --surface: #211c17;
-  --tint: #2a241e;
-  --paper: #f5efe6;
-  --fog: #b8aea2;
-  --sand: #f0a35e;
-  --on-sand: #17130f;
-  --mint: #5cc8ae;
-  --danger: #f7877a;
-  --ice: #a5b4fc;
-  --rule: rgba(245, 239, 230, 0.14);
-  --rule-strong: #7d7366;
-  --line: rgba(240, 163, 94, 0.3);
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 18px 40px -24px rgba(0, 0, 0, 0.7);
-  --watermark: rgba(240, 163, 94, 0.05);
+  --ink: #0a0a0b; /* page background */
+  --surface: #131316; /* cards */
+  --tint: #1a1a1f; /* quiet fills */
+  --paper: #ededef; /* main text */
+  --fog: #a0a0ab; /* muted text */
+  --sand: #9d8cff; /* violet accent */
+  --on-sand: #0a0a0b;
+  --mint: #3ddc97; /* good / live */
+  --danger: #ff7a7a; /* fail */
+  --ice: #7dd3fc; /* mock */
+  --rule: #25252b; /* hairlines */
+  --rule-strong: #64646f; /* input borders */
+  --line: rgba(157, 140, 255, 0.3);
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 40px -24px rgba(0, 0, 0, 0.9);
+  --glow: rgba(157, 140, 255, 0.16);
 }
 
-/* No JS (or before the head script runs): follow the OS. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --ink: #17130f;
-    --surface: #211c17;
-    --tint: #2a241e;
-    --paper: #f5efe6;
-    --fog: #b8aea2;
-    --sand: #f0a35e;
-    --on-sand: #17130f;
-    --mint: #5cc8ae;
-    --danger: #f7877a;
-    --ice: #a5b4fc;
-    --rule: rgba(245, 239, 230, 0.14);
-    --rule-strong: #7d7366;
-    --line: rgba(240, 163, 94, 0.3);
-    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 18px 40px -24px rgba(0, 0, 0, 0.7);
-    --watermark: rgba(240, 163, 94, 0.05);
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #fafafa;
+  --surface: #ffffff;
+  --tint: #f2f2f5;
+  --paper: #0a0a0b;
+  --fog: #55555f;
+  --sand: #5b45e0;
+  --on-sand: #ffffff;
+  --mint: #047857;
+  --danger: #c0262d;
+  --ice: #0369a1;
+  --rule: #e6e6ea;
+  --rule-strong: #8b8b96;
+  --line: rgba(91, 69, 224, 0.28);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -20px rgba(0, 0, 0, 0.25);
+  --glow: rgba(91, 69, 224, 0.1);
 }
 
 @theme inline {
   --font-sans: var(--font-body);
-  --font-serif: var(--font-fraunces);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-num);
   --color-ink: var(--ink);
   --color-surface: var(--surface);
   --color-tint: var(--tint);
@@ -96,28 +74,9 @@ body {
 
 body {
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  /* ledger paper: a faint baseline rule every 2rem */
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(2rem - 1px),
-    var(--watermark) calc(2rem - 1px),
-    var(--watermark) 2rem
-  );
-}
-
-body::before {
-  content: "ADPILOT";
-  position: fixed;
-  inset: auto -4vw -8vh auto;
-  font-family: var(--font-fraunces), serif;
-  font-size: min(28vw, 280px);
-  line-height: 0.75;
-  letter-spacing: -0.06em;
-  color: var(--watermark);
-  pointer-events: none;
-  z-index: 0;
-  font-weight: 600;
+  /* the one decorative moment: a faint violet glow at the top of every page */
+  background-image: radial-gradient(60rem 28rem at 50% -8rem, var(--glow), transparent 70%);
+  background-repeat: no-repeat;
 }
 
 a {
@@ -136,45 +95,48 @@ textarea {
   outline-offset: 2px;
 }
 
+/* ---------- Surfaces ---------- */
+
 .card {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 0.9rem;
+  border-radius: 12px;
   box-shadow: var(--shadow);
 }
 
-/* ledger corner tick */
-.card::after {
-  content: "";
-  position: absolute;
-  inset: 10px auto auto 10px;
-  width: 14px;
-  height: 14px;
-  border-top: 1px solid var(--sand);
-  border-left: 1px solid var(--sand);
-  opacity: 0.5;
-  pointer-events: none;
+.panel {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  min-width: 0;
 }
 
 .display {
-  font-family: var(--font-fraunces), Georgia, serif;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.04em;
 }
+
+.num {
+  font-family: var(--font-num), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sand);
+}
+
+/* ---------- Buttons + fields ---------- */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 999px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.btn:active {
-  transform: translateY(1px);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .btn:disabled {
@@ -185,7 +147,7 @@ textarea {
 .btn-primary {
   background: var(--sand);
   color: var(--on-sand);
-  padding: 0.8rem 1.25rem;
+  padding: 0.75rem 1.2rem;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -196,7 +158,7 @@ textarea {
   background: var(--surface);
   color: var(--paper);
   border: 1px solid var(--rule-strong);
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 1rem;
 }
 
 .btn-ghost:hover:not(:disabled) {
@@ -207,26 +169,26 @@ textarea {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .field label {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--sand);
-  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--paper);
+  font-weight: 600;
 }
 
 .field input,
 .field select,
 .field textarea {
-  background: var(--surface);
+  background: var(--ink);
   border: 1px solid var(--rule-strong);
-  border-radius: 0.6rem;
-  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
   color: var(--paper);
   outline: none;
+  width: 100%;
 }
 
 .field input::placeholder,
@@ -238,74 +200,172 @@ textarea {
 .field select:focus,
 .field textarea:focus {
   border-color: var(--sand);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sand) 22%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sand) 25%, transparent);
 }
 
-.kicker {
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--sand);
-  font-weight: 700;
+/* ---------- Layout: one centered container + a few grids ---------- */
+
+.page {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
 }
 
-.num {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
+/* A dashboard section: centered container with a steady vertical rhythm. */
+.story-chapter {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: clamp(3rem, 7vw, 5.5rem) clamp(1rem, 4vw, 2.5rem);
+  scroll-margin-top: 5rem;
 }
 
-.reveal {
-  opacity: 0;
+.section-head {
+  text-align: center;
+  max-width: 46rem;
+  margin: 0 auto clamp(1.75rem, 4vw, 2.75rem);
 }
+
+.section-head h2 {
+  margin-top: 0.5rem;
+  font-size: clamp(1.9rem, 4.2vw, 3rem);
+  line-height: 1.06;
+}
+
+.section-head p.sub {
+  margin: 0.85rem auto 0;
+  max-width: 60ch;
+  color: var(--fog);
+  font-size: 1.05rem;
+}
+
+.hero {
+  text-align: center;
+  padding-top: clamp(3.5rem, 9vw, 7rem);
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  line-height: 0.98;
+  max-width: 16ch;
+  margin: 1rem auto 0;
+}
+
+.hero .sub {
+  margin: 1.25rem auto 0;
+  max-width: 60ch;
+  color: var(--fog);
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+}
+
+.grid-2 {
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.grid-3 {
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.tiles {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr));
+}
+
+@media (min-width: 600px) {
+  .kpi-grid,
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.span-all {
+  grid-column: 1 / -1;
+}
+
+.measure {
+  max-width: 70ch;
+}
+
+.kpi {
+  padding: 1.15rem 1.3rem;
+  text-align: left;
+}
+
+.kpi dt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--fog);
+  font-size: 0.875rem;
+}
+
+.kpi dd {
+  margin-top: 0.6rem;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1;
+}
+
+/* ---------- Chrome ---------- */
 
 .nav-glass {
-  background: color-mix(in srgb, var(--ink) 94%, transparent);
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
   border-bottom: 1px solid var(--rule);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .story-reel {
   width: 100%;
 }
 
-.story-chapter {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 7rem 1.5rem 6rem;
-}
-
-@media (min-width: 768px) {
-  .story-chapter {
-    padding: 8rem 4.5rem 7rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .story-chapter {
-    padding-left: 8rem;
-    padding-right: 8rem;
-  }
-}
-
-.story-bit {
+.story-bit,
+.reveal {
   opacity: 0;
 }
 
 .story-dots {
   position: fixed;
-  right: 1.25rem;
+  right: 1rem;
   top: 50%;
   z-index: 30;
   transform: translateY(-50%);
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.6rem;
 }
 
 .story-dot {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-num), ui-monospace, monospace;
   font-size: 0.65rem;
-  letter-spacing: 0.12em;
   color: var(--fog);
 }
 
@@ -313,25 +373,19 @@ textarea {
   color: var(--sand);
 }
 
-.scroll-cue {
-  animation: bounce-cue 1.8s ease-in-out infinite;
-}
-
-@keyframes bounce-cue {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(10px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .scroll-cue {
-    animation: none;
-  }
   .btn {
     transition: none;
   }
+  .story-bit,
+  .reveal {
+    opacity: 1;
+  }
+}
+
+/* A card inside a card is a quiet tinted block, not a second floating card. */
+.card .card {
+  background: var(--tint);
+  border-color: transparent;
+  box-shadow: none;
 }

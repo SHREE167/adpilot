@@ -37,8 +37,8 @@ export function ReadinessCard({
   if (signal.status !== "ok" || !r) {
     return (
       <div className="story-bit max-w-3xl">
-        <h2 className="display text-5xl leading-[0.95] sm:text-7xl">Ready to spend?</h2>
-        <p className="mt-8 text-2xl leading-snug text-fog">
+        <h2 className="display text-3xl leading-[0.95] sm:text-4xl">Ready to spend?</h2>
+        <p className="mt-8 text-lg leading-snug text-fog">
           We could not read {domain || "your site"}, so there are no site checks for this plan.
         </p>
         <p className="mt-6 flex flex-wrap items-center gap-3 text-fog">
@@ -60,23 +60,23 @@ export function ReadinessCard({
 
   return (
     <>
-      <h2 className="story-bit display text-5xl leading-[0.95] sm:text-7xl">Ready to spend?</h2>
-      <div className="story-bit mt-10 flex flex-wrap items-end gap-x-8 gap-y-4">
+      <h2 className="story-bit display text-3xl leading-[0.95] sm:text-4xl">Ready to spend?</h2>
+      <div className="story-bit mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
         <p className="display num leading-[0.8] text-sand">
-          <span className="text-[26vw] sm:text-[11rem]">{r.score}</span>
-          <span className="ml-2 text-3xl text-fog sm:text-4xl">/100</span>
+          <span className="text-5xl sm:text-6xl">{r.score}</span>
+          <span className="ml-2 text-xl text-fog sm:text-2xl">/100</span>
         </p>
         <div className="pb-3">
-          <p className="display text-3xl sm:text-4xl">{verdict(r.score)}</p>
+          <p className="display text-xl sm:text-2xl">{verdict(r.score)}</p>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-fog">
             Readiness score <ProvenanceBadge estimate />
           </p>
         </div>
       </div>
 
-      <div className="story-bit card mt-12 max-w-4xl p-6 sm:p-8">
+      <div className="story-bit card mt-8 max-w-4xl p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-xl">
+          <h3 className="text-lg">
             What we found on <span className="text-sand">{domain}</span>
           </h3>
           <ProvenanceBadge signal={signal} />
@@ -105,13 +105,13 @@ export function ReadinessCard({
       </div>
 
       {fixes.length ? (
-        <div className="story-bit mt-12 max-w-3xl">
-          <h3 className="display text-3xl sm:text-4xl">
+        <div className="story-bit mt-8 max-w-3xl">
+          <h3 className="display text-xl sm:text-2xl">
             {open > 0 ? "Fix these first" : "One more thing"}
           </h3>
           <ol className="mt-6 space-y-4">
             {fixes.map((f, i) => (
-              <li key={f} className="grid grid-cols-[2rem_1fr] text-xl leading-snug">
+              <li key={f} className="grid grid-cols-[2rem_1fr] text-lg leading-snug">
                 <span className="num text-sand">{i + 1}</span>
                 <span className={urgent.has(f) ? "text-paper" : "text-fog"}>{f}</span>
               </li>

@@ -33,22 +33,22 @@ export function PlansList({
   }, [initial]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-6 py-16 sm:px-12">
-      <header>
+    <div className="page space-y-6 py-12 sm:py-16">
+      <header className="section-head !mb-2">
         <p className="kicker">Saved plans</p>
-        <h1 className="mt-2 text-3xl font-semibold">Plans</h1>
-        <p className="mt-2 text-sm text-fog">
+        <h1 className="display mt-2 text-3xl sm:text-4xl">Plans</h1>
+        <p className="mx-auto mt-3 max-w-[60ch] text-sm text-fog">
           Source: {source}. Without POSTGRES_URL, this browser&apos;s localStorage
           is the durable copy.
         </p>
       </header>
       {plans.length === 0 ? (
-        <div className="card p-8 text-sm text-fog">
+        <div className="card mx-auto max-w-2xl p-8 text-center text-sm text-fog">
           No plans yet. <Link className="text-mint" href="/">Build one</Link> or
           load a sample fixture from the form.
         </div>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid-2">
           {plans.map((p) => (
             <li key={p.id}>
               <Link

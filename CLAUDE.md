@@ -55,7 +55,8 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 | `lib/types.ts` | `PlanResult` contract, including Signal/Enrichment/Trace types (client-safe). |
 | `app/actions.ts`, `app/page.tsx` | Server Actions (`createPlan` → `runAgent`, `checkPageSpeed`); `maxDuration = 60`. |
 | `app/api/plan/route.ts`, `lib/plan-progress.ts`, `components/PipelineProgress.tsx` | Streamed build: NDJSON of trace events (`createTrace(now, onEvent)`), then the plan. Form falls back to `createPlan` if no stream. |
-| `components/Dashboard.tsx` | Story-scroll result view (glass/gold, Fraunces + Syne, anime.js). |
+| `components/Dashboard.tsx` | Result view: centered hero + KPI tiles, centered section heads, paired `grid-2` cards (Midnight Pro theme, Geist + Geist Mono, anime.js fade-ups). |
+| `app/globals.css`, `lib/theme.ts`, `components/ThemeToggle.tsx` | Midnight Pro tokens (dark default, light via toggle), layout primitives (`.page`, `.story-chapter`, `.section-head`, `.hero`, `.grid-2/3`, `.kpi-grid`, `.tiles`, `.panel`); TS palette mirrors CSS (tests/theme.test.ts). |
 | `components/ProvenanceBadge.tsx`, `ReadinessCard.tsx`, `TimingCard.tsx`, `DataSources.tsx` | LIVE / ESTIMATE / Not connected badges and the v2 cards. |
 | `fixtures/` | Sample briefs, v1 plan snapshots, `fixtures/api/<source>/` mock fixtures. |
 | `eval/run.ts`, `eval/metrics.ts`, `eval/golden-briefs.json`, `scripts/run-eval.mjs` | F16: `runAgent(input, {baseline: true})` = v1 path; specificity, diversity, signature, reality coverage, additivity, latency → `eval/report.md`. |
@@ -68,7 +69,7 @@ Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `
 - Keys only from `process.env` on the server. Never import `lib/enrich/*` into a client component.
 - New `PlanResult` fields are optional; old saved plans (localStorage + Postgres) must still render. `planVersion: 2`.
 - No new npm dependency without asking. Prefer fetch + small helpers. Unit tests use `node:test` (built in).
-- UI: use the frontend-design skill; extend the existing glass/gold look; respect `prefers-reduced-motion`; mobile width first.
+- UI: use the frontend-design skill; extend the Midnight Pro look (dark default, one violet accent, Geist); use the layout primitives in `app/globals.css` (1200px centered container, centered section heads, `grid-2` pairs); card type stays card-sized (no story-scroll giants inside cards); respect `prefers-reduced-motion`; check 360px.
 - Every number in the UI is LIVE (source + date) or ESTIMATE. Never present an estimate as live data. Mock data is badged MOCK.
 - All plan text (kit, copy, outreach) is English. The form language is an audience hint only. No invented numbers in templates; use {{offer}}-style placeholders.
 - After each feature, `npm run lint`, `npx tsc --noEmit`, `npm run build` and `npm test` must all pass. One local commit per feature.

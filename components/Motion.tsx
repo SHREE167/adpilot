@@ -34,22 +34,20 @@ export function StoryScene({
     const play = () => {
       const bits = el.querySelectorAll(".story-bit");
       const tl = createTimeline({
-        defaults: { ease: "out(4)", duration: 1100 },
+        defaults: { ease: "out(3)", duration: 600 },
       });
+      // Calm entrance: a short fade-up, no scale or rotation.
       tl.add(el, {
         opacity: [0, 1],
-        scale: [0.88, 1],
-        rotate: [1.6, 0],
+        translateY: [12, 0],
       }, 0);
       if (bits.length) {
         tl.add(
           bits,
           {
             opacity: [0, 1],
-            translateY: [90, 0],
-            translateX: [-30, 0],
-            rotate: [3, 0],
-            delay: stagger(95, { from: "first" }),
+            translateY: [14, 0],
+            delay: stagger(45, { from: "first" }),
           },
           40
         );
@@ -140,20 +138,18 @@ export function Reveal({
     if (!items.length) {
       animate(el, {
         opacity: [0, 1],
-        translateY: [40, 0],
-        scale: [0.96, 1],
-        duration: 1000,
-        ease: "out(4)",
+        translateY: [12, 0],
+        duration: 600,
+        ease: "out(3)",
       });
       return;
     }
     animate(items, {
       opacity: [0, 1],
-      translateY: [70, 0],
-      rotate: [2, 0],
-      delay: stagger(90),
-      duration: 1000,
-      ease: "out(4)",
+      translateY: [14, 0],
+      delay: stagger(45),
+      duration: 600,
+      ease: "out(3)",
     });
   }, []);
   return (

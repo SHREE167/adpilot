@@ -47,8 +47,8 @@ export function PlanLoader({
 
   if (error && !plan) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-24">
-        <div className="card p-8 text-sm text-fog">
+      <div className="page py-24">
+        <div className="card mx-auto max-w-xl p-8 text-center text-sm text-fog">
           <p className="text-danger">{error}</p>
         </div>
       </div>
@@ -56,8 +56,8 @@ export function PlanLoader({
   }
   if (!plan) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-24">
-        <div className="card p-8 text-sm text-fog">Loading plan…</div>
+      <div className="page py-24">
+        <div className="card mx-auto max-w-xl p-8 text-center text-sm text-fog">Loading plan…</div>
       </div>
     );
   }

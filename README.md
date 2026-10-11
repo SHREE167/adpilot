@@ -32,7 +32,7 @@ No API key is required. Channel mix comes from a trained **XGBoost** model. With
 ## Roadmap (what we are building)
 
 **Now (this pass)**
-1. Maximalist + glass UI (Fraunces/Syne, gold foil, blur panels, grain, floating orbs).
+1. Midnight Pro UI (v2): dark by default with a light toggle, one violet accent, Geist type, a centered 1200px layout with paired cards (v1 used a maximalist gold/glass look).
 2. Motion with **anime.js v4** (`animate` + `stagger`) on form and dashboard.
 3. **Product recognition** before scoring: scrape title/H1/JSON-LD/excerpt → heuristic intel → optional LLM refine → XGBoost uses that category/tier.
 4. Ads and outreach must name the recognized product, not a generic “try us”.

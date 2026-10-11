@@ -70,6 +70,8 @@ export function PlanHealth({ plan, speed }: { plan: PlanResult; speed: PageSpeed
           ),
         }
       : signalItem("speed", "PageSpeed", "#ready", speed.signal),
+    ...(e.audience ? [signalItem("meta", "Meta audience", "#reach", e.audience)] : []),
+    ...(e.creators ? [signalItem("youtube", "YouTube creators", "#voices", e.creators)] : []),
     { key: "calendar", label: "Festival calendar", href: "#timing", badge: <ProvenanceBadge estimate /> },
     { key: "model", label: "Rate card + XGBoost", href: "#numbers", badge: <ProvenanceBadge estimate /> },
     {
@@ -100,8 +102,8 @@ export function PlanHealth({ plan, speed }: { plan: PlanResult; speed: PageSpeed
 
 function Strip({ children }: { children: ReactNode }) {
   return (
-    <section aria-label="Plan health" className="mx-auto max-w-6xl px-6 pt-6 sm:px-12">
-      <div className="card flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+    <section aria-label="Plan health" className="page pt-6">
+      <div className="card flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-center">
         <h2 className="kicker shrink-0">Plan health</h2>
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {children}

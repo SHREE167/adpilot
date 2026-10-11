@@ -35,8 +35,8 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
   if (signal.status !== "ok" || !w) {
     return (
       <div className="story-bit max-w-3xl">
-        <h2 className="display text-5xl leading-[0.95] sm:text-7xl">Timing</h2>
-        <p className="mt-8 flex flex-wrap items-center gap-3 text-xl text-fog">
+        <h2 className="display text-3xl leading-[0.95] sm:text-4xl">Timing</h2>
+        <p className="mt-8 flex flex-wrap items-center gap-3 text-lg text-fog">
           <ProvenanceBadge signal={signal} /> {signal.reason}
         </p>
       </div>
@@ -54,10 +54,10 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
 
   return (
     <>
-      <h2 className="story-bit display max-w-[22ch] text-4xl leading-[1] sm:text-6xl">
+      <h2 className="story-bit display max-w-[22ch] text-2xl leading-[1] sm:text-4xl">
         {lead ? leadLine(lead) : `A quiet month in ${where}.`}
       </h2>
-      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-3 text-2xl leading-snug text-fog">
+      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-3 text-lg leading-snug text-fog">
         {peak > 1 ? (
           <>
             Festival-week CPMs typically rise ({uplift(peak)}). <ProvenanceBadge estimate />
@@ -68,7 +68,7 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
       </p>
       {lead ? <p className="story-bit mt-4 max-w-3xl text-lg text-fog">{lead.advice}</p> : null}
 
-      <ol className="story-bit mt-12 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Plan weeks">
+      <ol className="story-bit mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Plan weeks">
         {w.weekMultipliers.map((m, i) => {
           const hot = m > 1;
           return (
@@ -79,7 +79,7 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
               <p className="text-sm text-fog">
                 Week {i + 1} · {dayLabel(shiftIso(w.windowStart, i * 7))}
               </p>
-              <p className={`num display mt-2 text-3xl ${hot ? "text-sand" : "text-fog"}`}>
+              <p className={`num display mt-2 text-xl ${hot ? "text-sand" : "text-fog"}`}>
                 {hot ? uplift(m) : "normal"}
               </p>
               <p className="mt-1 min-h-[1.25rem] text-sm text-paper">{w.weekFestivals[i] || ""}</p>
@@ -89,8 +89,8 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
       </ol>
 
       {w.upcoming.length ? (
-        <div className="story-bit mt-12 max-w-3xl">
-          <h3 className="text-xl">Coming up after this plan</h3>
+        <div className="story-bit mt-8 max-w-3xl">
+          <h3 className="text-lg">Coming up after this plan</h3>
           <ul className="mt-4 divide-y divide-rule">
             {w.upcoming.slice(0, 4).map((f) => (
               <li key={`${f.name}-${f.date}`} className="grid grid-cols-[5.5rem_1fr] gap-3 py-3">
@@ -106,7 +106,7 @@ export function TimingCard({ signal, city }: { signal: Signal<SeasonWindow>; cit
         </div>
       ) : null}
 
-      <p className="story-bit mt-10 max-w-3xl text-sm text-fog">
+      <p className="story-bit mt-6 max-w-3xl text-sm text-fog">
         {w.state ? `Festivals for ${where} plus national dates.` : `${signal.reason}.`}{" "}
         {unverified
           ? "Dates come from a static calendar and are not yet verified; uplifts are planning guesses."

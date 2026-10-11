@@ -135,7 +135,7 @@ export function SpeedRow({
     body = (
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <p className={`display num leading-none ${band.tone}`}>
-          <span className="text-5xl sm:text-6xl">{r.score}</span>
+          <span className="text-3xl sm:text-4xl">{r.score}</span>
           <span className="ml-1 text-lg text-fog">/100</span>
         </p>
         <div className="min-w-0 flex-1">

@@ -40,8 +40,8 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
     const noKey = /no API key/.test(signal.reason || "");
     return (
       <div className="story-bit max-w-3xl">
-        <h2 className="display text-5xl leading-[0.95] sm:text-7xl">Who already talks to {city}?</h2>
-        <p className="mt-8 flex flex-wrap items-center gap-3 text-xl text-fog">
+        <h2 className="display text-3xl leading-[0.95] sm:text-4xl">Who already talks to {city}?</h2>
+        <p className="mt-8 flex flex-wrap items-center gap-3 text-lg text-fog">
           <ProvenanceBadge signal={signal} />
           {noKey
             ? `Add YOUTUBE_API_KEY to find small YouTube creators in ${city} who could feature you.`
@@ -55,7 +55,7 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
 
   return (
     <>
-      <h2 className="story-bit display max-w-[18ch] text-5xl leading-[0.95] sm:text-7xl">
+      <h2 className="story-bit display max-w-[18ch] text-3xl leading-[0.95] sm:text-4xl">
         {f.picks.length ? (
           <>
             {f.picks.length} local {f.picks.length === 1 ? "voice" : "voices"} for {f.topic} in {city}.
@@ -64,7 +64,7 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
           <>No small {f.topic} creators found for {city}.</>
         )}
       </h2>
-      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-xl text-fog">
+      <p className="story-bit mt-8 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-lg text-fog">
         <span>
           YouTube search &ldquo;{f.query}&rdquo; found <span className="num text-paper">{f.found}</span> channels;{" "}
           <span className="num text-paper">{f.inBand}</span> have 2k to 200k subscribers.
@@ -73,7 +73,7 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
       </p>
 
       {f.picks.length ? (
-        <ol className="story-bit mt-12 max-w-3xl space-y-10">
+        <ol className="story-bit mt-8 max-w-3xl space-y-10">
           {f.picks.map((p, i) => {
             const band = costBand(p.subscribers);
             return (
@@ -84,7 +84,7 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="display block truncate text-3xl text-paper underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none"
+                    className="display block truncate text-xl text-paper underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none"
                     title={`Open ${p.title} on YouTube`}
                   >
                     {p.title}
@@ -119,7 +119,7 @@ export function CreatorsCard({ signal, city }: { signal: Signal<CreatorFinder>; 
         </ol>
       ) : null}
 
-      <p className="story-bit mt-12 max-w-3xl text-sm text-fog">
+      <p className="story-bit mt-8 max-w-3xl text-sm text-fog">
         YouTube channels only: public channel names and stats, ranked by city mention, topic,
         language and size. We do not search Instagram creators. Collab prices are typical Indian
         rates, not quotes; ask each creator.

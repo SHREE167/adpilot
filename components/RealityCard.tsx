@@ -12,7 +12,7 @@ const VERDICT: Record<RealityVerdict, { label: string; tone: string; mark: strin
 function Term({ value, label }: { value: string; label: string }) {
   return (
     <span className="inline-flex flex-col">
-      <span className="num display text-3xl leading-none text-paper sm:text-4xl">{value}</span>
+      <span className="num display text-xl leading-none text-paper sm:text-2xl">{value}</span>
       <span className="mt-1 text-sm text-fog">{label}</span>
     </span>
   );
@@ -20,7 +20,7 @@ function Term({ value, label }: { value: string; label: string }) {
 
 function Op({ children }: { children: string }) {
   return (
-    <span aria-hidden className="display self-start text-3xl leading-none text-fog sm:text-4xl">
+    <span aria-hidden className="display self-start text-xl leading-none text-fog sm:text-2xl">
       {children}
     </span>
   );
@@ -85,17 +85,17 @@ export function RealityCard({ rc, hasFreeActions }: { rc: RealityCheck; hasFreeA
   const v = VERDICT[rc.verdict];
   return (
     <>
-      <h2 className={`story-bit display text-6xl leading-[0.9] sm:text-8xl ${v.tone}`}>{v.label}.</h2>
-      <p className="story-bit mt-6 max-w-3xl text-2xl leading-snug text-paper sm:text-3xl">
+      <h2 className={`story-bit display text-4xl leading-[0.9] sm:text-5xl ${v.tone}`}>{v.label}.</h2>
+      <p className="story-bit mt-6 max-w-3xl text-lg leading-snug text-paper sm:text-xl">
         {rc.headline}
       </p>
-      <p className="story-bit mt-3 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-xl text-fog">
+      <p className="story-bit mt-3 flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-2 text-lg text-fog">
         {rc.detail.replace(" (ESTIMATE)", "")}
         <ProvenanceBadge estimate />
       </p>
 
-      <div className="story-bit card mt-10 max-w-4xl p-6 sm:p-8">
-        <h3 className="text-xl">How we worked it out</h3>
+      <div className="story-bit card mt-6 max-w-4xl p-6 sm:p-8">
+        <h3 className="text-lg">How we worked it out</h3>
         <div className="mt-6 flex flex-wrap items-start gap-x-5 gap-y-6">
           <Term value={inr(rc.budget)} label="budget" />
           <Op>÷</Op>
@@ -122,7 +122,7 @@ export function RealityCard({ rc, hasFreeActions }: { rc: RealityCheck; hasFreeA
         </p>
       </div>
 
-      <p className="story-bit mt-10 max-w-3xl text-xl leading-snug text-paper">{rc.advice}</p>
+      <p className="story-bit mt-6 max-w-3xl text-lg leading-snug text-paper">{rc.advice}</p>
       {rc.verdict !== "healthy" ? (
         <div className="story-bit mt-6 flex flex-wrap gap-3">
           {hasFreeActions ? (

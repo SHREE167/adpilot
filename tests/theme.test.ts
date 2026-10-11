@@ -8,6 +8,7 @@ import {
   channelColor,
   contrast,
   ensureContrast,
+  DEFAULT_THEME,
   THEME_INIT_SCRIPT,
   THEME_PALETTE,
   THEME_STORAGE_KEY,
@@ -24,9 +25,9 @@ function block(selector: string): string {
   return css.slice(i, css.indexOf("}", i));
 }
 
-describe("Ledger palette", () => {
+describe("Midnight Pro palette", () => {
   it("TS palette matches the CSS variables (charts and CSS agree)", () => {
-    const vars = { bg: "--ink", surface: "--surface", text: "--paper", muted: "--fog", accent: "--sand", good: "--mint", bad: "--danger", mock: "--ice" } as const;
+    const vars = { bg: "--ink", surface: "--surface", tint: "--tint", ruleStrong: "--rule-strong", text: "--paper", muted: "--fog", accent: "--sand", good: "--mint", bad: "--danger", mock: "--ice" } as const;
     const blocks: Record<ThemeName, string> = { light: block(':root[data-theme="light"]'), dark: block(':root[data-theme="dark"]') };
     for (const t of THEMES) {
       for (const [k, v] of Object.entries(vars)) {
@@ -36,14 +37,21 @@ describe("Ledger palette", () => {
     }
   });
 
-  it("every text colour is WCAG AA (4.5:1) on page and card, both themes", () => {
+  it("every text colour is WCAG AA (4.5:1) on page, card and tint, both themes; borders 3:1", () => {
     for (const t of THEMES) {
       const p = THEME_PALETTE[t];
       for (const k of ["text", "muted", "accent", "good", "bad", "mock"] as const) {
-        for (const bg of [p.bg, p.surface]) {
+        for (const bg of [p.bg, p.surface, p.tint]) {
           assert.ok(contrast(p[k], bg) >= 4.5, `${t} ${k} on ${bg}: ${contrast(p[k], bg).toFixed(2)}`);
         }
       }
+    }
+  });
+
+  it("input borders reach 3:1 on the card and the page", () => {
+    for (const t of THEMES) {
+      const p = THEME_PALETTE[t];
+      for (const bg of [p.surface, p.bg]) assert.ok(contrast(p.ruleStrong, bg) >= 3, `${t} border on ${bg}`);
     }
   });
 
@@ -84,12 +92,13 @@ describe("theme init script", () => {
     return theme;
   }
 
-  it("uses the saved choice, else the OS, and survives blocked storage", () => {
+  it("uses the saved choice, else dark (the default identity), and survives blocked storage", () => {
     assert.equal(run({ stored: "dark" }), "dark");
     assert.equal(run({ stored: "light", osDark: true }), "light");
-    assert.equal(run({ osDark: true }), "dark");
-    assert.equal(run({}), "light");
-    assert.equal(run({ stored: "neon" }), "light", "junk values are ignored");
-    assert.equal(run({ storageThrows: true, osDark: true }), "dark");
+    assert.equal(run({}), "dark");
+    assert.equal(run({ osDark: false }), "dark", "the OS does not override the default");
+    assert.equal(run({ stored: "neon" }), "dark", "junk values are ignored");
+    assert.equal(run({ storageThrows: true }), "dark");
+    assert.equal(DEFAULT_THEME, "dark");
   });
 });
