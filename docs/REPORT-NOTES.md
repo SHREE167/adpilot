@@ -129,7 +129,7 @@ Pipeline (one server function `runAgent`, every step a trace span):
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reality check coverage | 0% | 70% (14/20) |
 | Diversity (mean Jaccard distance) | 0.62 | 0.62 |
-| Latency p50 (ms, offline) | ~12 | ~82 |
+| Latency p50 (ms, offline; varies by machine) | ~9 | ~64 |
 
 Talking points:
 - Specificity goes from 0 to about 14 local, sourced facts per plan.

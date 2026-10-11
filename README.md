@@ -54,7 +54,7 @@ From [`eval/report.md`](eval/report.md): 20 golden briefs, mock mode, no keys, n
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reality check coverage | 0% | 70% (14/20; the rest give no price) |
 | Diversity (mean Jaccard distance of mixes) | 0.62 | 0.62 |
-| Latency p50 (ms, offline) | ~12 | ~82 |
+| Latency p50 (ms, offline; varies by machine) | ~9 | ~64 |
 
 Diversity is unchanged because v2 does not change which channels the scorer picks. That is the job of the M6 critic and explore slice (see [Future work](#future-work)).
 

@@ -1,7 +1,7 @@
 # AdPilot eval report (F16, M8 final)
 
-- **Date:** 2026-10-11 (2026-10-11T14:42:34.715Z)
-- **Git:** `85f2093` (uncommitted changes)
+- **Date:** 2026-10-11 (2026-10-11T14:53:13.092Z)
+- **Git:** `3c30404`
 - **Briefs:** 20 (`eval/golden-briefs.json`)
 - **Mode:** `ADPILOT_MOCK_APIS=1`, no API keys, no network, no LLM (template copy)
 - **Reproduce:** `npm run eval` (exits non-zero if a gated check fails)
@@ -19,7 +19,7 @@
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reality check coverage | 0% (0/20) | 70% (14/20) |
 | Diversity (mean Jaccard distance) | 0.62 | 0.62 |
-| Latency p50 / p95 (ms, offline mock) | 11.3 / 20.3 | 73.5 / 118.6 |
+| Latency p50 / p95 (ms, offline mock) | 8.9 / 25.2 | 63.6 / 77.6 |
 
 v2 beats v1 on specificity (0.0 → 13.9 grounded facts per plan), explanation additivity (0% → 100%) and reality coverage, with 100% grounding. Diversity is equal (0.62 vs 0.62), so F16's "beats v1 on diversity" is **not met yet**: the scorer that picks channels is unchanged, and the critic and explore slice (M6) are what move it.
 
@@ -35,7 +35,7 @@ v2 beats v1 on specificity (0.0 → 13.9 grounded facts per plan), explanation a
 | Reality coverage (briefs with a verdict) | 0% (0/20) | 70% (14/20) |
 | Reality verdicts | — | healthy 8, tight 3, likely loss 3 |
 | Explanation additivity (base + Σ = score) | 0% (zero-ablation, 240 checks) | 100% (TreeSHAP, 240 checks) |
-| Latency p50 / p95 (ms, offline mock) | 11.3 / 20.3 | 73.5 / 118.6 |
+| Latency p50 / p95 (ms, offline mock) | 8.9 / 25.2 | 63.6 / 77.6 |
 | Mix sums to budget | 20 / 20 | 20 / 20 |
 | Slider: briefs with a budget grid | — (no slider) | 20 / 20 (1807 slider steps) |
 | Slider: totals = slider budget at every step | — (no slider) | 20 / 20 |
@@ -43,7 +43,7 @@ v2 beats v1 on specificity (0.0 → 13.9 grounded facts per plan), explanation a
 | Slider: 1-5 channels, none > 50% from ₹3,000; LinkedIn policy | — (no slider) | 20 / 20 |
 | Slider: channel count never falls as budget rises | — (no slider) | 20 / 20 |
 | Slider: impressions never fall as budget rises (reported, not gated) | — (no slider) | 12 / 20 |
-| Slider: recompute p50 / p95 (ms per move) | — (no slider) | 0.027 / 0.093 |
+| Slider: recompute p50 / p95 (ms per move) | — (no slider) | 0.025 / 0.074 |
 | Signature ₹3k vs ₹40k mixes at 0.25× and 4× (Jaccard) | — (no slider) | 1.00 at 0.25× / 1.00 at 4× |
 | Ranges ordered (low ≤ mid ≤ high) | 100% (351/351) | 100% (365/365) |
 | Reach bands backed by a signal (Meta pool) / high within pool | 0 / 20 of 20 | 32 / 20 of 20 |
