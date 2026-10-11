@@ -1,5 +1,5 @@
 import { getEntry, type RateCard } from "./rate-card";
-import { forecastChannel } from "./forecast";
+import { forecastChannel, type SeasonAdjust } from "./forecast";
 import type {
   ChannelAllocation,
   ChannelScore,
@@ -20,7 +20,8 @@ export function allocateBudget(
   input: PlanInput,
   scores: ChannelScore[],
   rateCard: RateCard,
-  priceTier: PriceTier
+  priceTier: PriceTier,
+  season?: SeasonAdjust
 ): ChannelAllocation[] {
   const budget = Math.round(input.budget);
   const ranked = [...scores].sort((a, b) => b.score - a.score);
@@ -60,7 +61,7 @@ export function allocateBudget(
       score: s.score,
       budget: amount,
       percent: budget > 0 ? (amount / budget) * 100 : 0,
-      forecast: forecastChannel(amount, entry, input, priceTier),
+      forecast: forecastChannel(amount, entry, input, priceTier, season),
       explanation: "",
     });
   });
@@ -70,7 +71,7 @@ export function allocateBudget(
     rows[0].budget += budget - spent;
     rows[0].percent = (rows[0].budget / budget) * 100;
     const entry = getEntry(rateCard, rows[0].channelId);
-    rows[0].forecast = forecastChannel(rows[0].budget, entry, input, priceTier);
+    rows[0].forecast = forecastChannel(rows[0].budget, entry, input, priceTier, season);
   }
 
   return rows;

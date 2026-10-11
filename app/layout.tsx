@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist_Mono, Syne } from "next/font/google";
-import { FloatingOrbs } from "@/components/Motion";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Nav } from "@/components/Nav";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-const syne = Syne({
-  variable: "--font-syne",
+/** Midnight Pro: Geist for text and headlines, Geist Mono for numbers. */
+const geist = Geist({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-num",
   subsets: ["latin"],
 });
 
@@ -33,19 +27,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${syne.variable} ${fraunces.variable} ${geistMono.variable} antialiased min-h-screen`}
-      >
-        <FloatingOrbs />
-        <div className="grain" />
-        <div className="relative z-10">
+    // data-theme is set by THEME_INIT_SCRIPT before hydration, so React must not fight it.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Before paint: saved theme, else dark (the default identity). No flash of the wrong theme. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className={`${geist.variable} ${geistMono.variable} antialiased min-h-screen`}>
+        <div className="relative">
           <Nav />
-          <main className="w-full pb-24 pt-2">{children}</main>
-          <footer className="mx-auto max-w-5xl px-6 pb-12 text-sm text-fog sm:px-12">
-            AdPilot does not buy ads or connect to Meta/Google. Every metric is an
-            ESTIMATE from a local India 2026 rate card. Channel fit is XGBoost;
-            product reading is heuristic + optional LLM.
+          <main className="w-full pb-24">{children}</main>
+          <footer className="page border-t border-rule pb-12 pt-8 text-center text-sm text-fog">
+            <p className="mx-auto max-w-[70ch]">
+              AdPilot does not buy ads or touch any ad account. Optional data sources (Google Places, PageSpeed,
+              YouTube, Meta) are read-only and badged LIVE with their date; forecasts are ESTIMATE from a local India
+              2026 rate card. Channel fit is XGBoost; product reading is heuristic + optional LLM.
+            </p>
           </footer>
         </div>
       </body>

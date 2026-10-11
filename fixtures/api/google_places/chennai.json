@@ -1,0 +1,42 @@
+{
+  "fetchedAt": "2026-10-10T18:23:29.992Z",
+  "data": {
+    "query": "snack shop in Chennai",
+    "keyword": "snack shop",
+    "count": 20,
+    "more": true,
+    "avgRating": 4.5,
+    "ratedCount": 20,
+    "top": [
+      {
+        "name": "Native Sweets and Snacks",
+        "rating": 5,
+        "reviews": 15
+      },
+      {
+        "name": "AK Snacks Box",
+        "rating": 4.9,
+        "reviews": 140
+      },
+      {
+        "name": "MMM SNACKS",
+        "rating": 4.9,
+        "reviews": 60
+      },
+      {
+        "name": "Snack D`Lite",
+        "rating": 4.9,
+        "reviews": 38
+      },
+      {
+        "name": "Kovilpatti Sweets & Snacks in online",
+        "rating": 4.9,
+        "reviews": 33
+      }
+    ],
+    "own": {
+      "query": "Campus Crunch Chennai",
+      "found": false
+    }
+  }
+}

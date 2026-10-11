@@ -6,14 +6,6 @@ export function inr(value: number): string {
   }).format(Math.round(value));
 }
 
-export function inrExact(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 export function compactNumber(value: number): string {
   return new Intl.NumberFormat("en-IN", {
     notation: "compact",
@@ -31,15 +23,6 @@ export function ctrPct(ctr: number): string {
 
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
-}
-
-export function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/https?:\/\//g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
 }
 
 export function newPlanId(): string {

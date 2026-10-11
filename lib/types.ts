@@ -54,6 +54,10 @@ export interface PlanInput {
   audience_notes: string;
   goal: GoalId | string;
   language: string;
+  /** F8 (optional): price of one sale in INR. Both price and margin are needed for the reality check. */
+  price?: number;
+  /** F8 (optional): gross margin per sale, percent (1-95). */
+  margin?: number;
 }
 
 export interface SiteSnapshot {
@@ -69,6 +73,23 @@ export interface SiteSnapshot {
   textExcerpt?: string | null;
   scraped: boolean;
   scrapeError?: string;
+  /** v2: when the page was fetched, and whether it came from a mock fixture. */
+  fetchedAt?: string;
+  mock?: boolean;
+  /** v2 (F1 part A): tracking + funnel detection from the fetched HTML. */
+  tracking?: TrackingSignals;
+}
+
+export interface TrackingSignals {
+  https: boolean;
+  viewport: boolean;
+  metaPixel: boolean;
+  ga4: boolean;
+  gtmIds: string[];
+  whatsapp: boolean;
+  tel: boolean;
+  cta: boolean;
+  ogImage: boolean;
 }
 
 export interface ProductIntel {
@@ -93,6 +114,40 @@ export interface ChannelScore {
   rejectReason?: string;
 }
 
+/** F14: a forecast as low / mid / high. mid is the single number shown before M5. */
+export interface ForecastRange {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+/**
+ * Where a band comes from. "default" = flat ±pct on rate-card math; "signal" =
+ * narrowed because a LIVE/MOCK signal backs the number (Meta pool); "calibrated"
+ * is reserved for M6 (empirical intervals from real actuals).
+ */
+export type BandKind = "default" | "signal" | "calibrated";
+
+export interface ForecastBand {
+  kind: BandKind;
+  /** Half-width as a fraction of mid, e.g. 0.3 = ±30%. */
+  pct: number;
+  /** Signal source when kind is "signal", e.g. "meta_reach". */
+  source?: string;
+  /** "default band" / "backed by Meta pool". */
+  label: string;
+}
+
+export interface ForecastRanges {
+  reach: ForecastRange;
+  clicks: ForecastRange;
+  conversions: ForecastRange;
+  /** Band for clicks + conversions (and reach unless reachBand is set). */
+  band: ForecastBand;
+  /** Separate band for reach when a signal narrows it. */
+  reachBand?: ForecastBand;
+}
+
 export interface ChannelForecast {
   impressions: number;
   clicks: number;
@@ -103,6 +158,10 @@ export interface ChannelForecast {
   conversions: number;
   cpa: number | null;
   note: string;
+  /** F4: reach was cut to fit Meta's audience pool for the targeting. */
+  reachCapped?: boolean;
+  /** F14: low/mid/high; absent on plans made before M5 (derive a default band). */
+  ranges?: ForecastRanges;
 }
 
 export interface ChannelAllocation {
@@ -153,6 +212,9 @@ export interface WeeklyPoint {
   impressions: number;
   clicks: number;
   spend: number;
+  /** v2 (F3): set only on festival weeks. */
+  cpmMultiplier?: number;
+  festival?: string;
 }
 
 export interface PlanTotals {
@@ -164,6 +226,8 @@ export interface PlanTotals {
   estimatedCpa: number | null;
   estimatedRoas: number | null;
   estimatedAov: number;
+  /** F14: sums of the channel lows/mids/highs (conservative). Absent before M5. */
+  ranges?: Pick<ForecastRanges, "reach" | "clicks" | "conversions">;
 }
 
 export interface PlanResult {
@@ -188,6 +252,406 @@ export interface PlanResult {
   estimateLabel: "ESTIMATE";
   agentMs: number;
   scorer: "xgboost";
+  /** v2 fields are optional so v1 plans (localStorage + Postgres) still render. */
+  planVersion?: 2;
+  enrichment?: EnrichmentBundle;
+  /** F10: free actions before any paid spend (rule-based, from signals + brief). */
+  zeroRupee?: ZeroRupeeItem[];
+  /** F8: break-even verdict; absent when the brief has no price/margin. */
+  realityCheck?: RealityCheck;
+  /** F9: exact TreeSHAP per channel; absent on plans made before M3. */
+  shap?: PlanShap;
+  /** F11: budget slider grid; absent on plans made before M5 (no slider shown). */
+  budgetGrid?: BudgetGrid;
+  /** F7: per-channel launch kit; absent on plans made before M4. */
+  launchKit?: LaunchKit;
+  trace?: PlanTrace;
+}
+
+/** One feature's SHAP contribution, in score points. */
+export interface ShapDriver {
+  feature: string;
+  /** The feature as it applies to this brief, e.g. "Audience age ~21". */
+  label: string;
+  value: number;
+}
+
+/** base + Σ drivers + other == prediction (raw model output, before the 0-100 clamp). */
+export interface ChannelShap {
+  channelId: ChannelId;
+  base: number;
+  prediction: number;
+  /** The plan's final score for the channel (clamped, rounded, after policy rules). */
+  score: number;
+  /** Top drivers by |value|. */
+  drivers: ShapDriver[];
+  /** Sum of every other feature's contribution. */
+  other: number;
+  otherCount: number;
+}
+
+/** F11: one precomputed budget on the slider. */
+export interface BudgetGridPoint {
+  budget: number;
+  /** budget / original budget, e.g. 0.25 ... 4. */
+  factor: number;
+  /** Raw XGBoost score per channel at this budget, before policy rules (all 12). */
+  scores: Record<ChannelId, number>;
+  /** Exact TreeSHAP only for the channels in the mix at this budget (keeps plans lean). */
+  shap: ChannelShap[];
+}
+
+/**
+ * F11: scores at ~11 log-spaced budgets (0.25x-4x). The browser re-runs the pure
+ * allocate + forecast on these; the model itself never leaves the server.
+ */
+export interface BudgetGrid {
+  version: 1;
+  /** The plan's own budget (factor 1, always a grid point). */
+  base: number;
+  points: BudgetGridPoint[];
+  /** Rate card snapshot the plan was priced with. */
+  rateCard: { version: string; channels: RateCardEntry[] };
+  /** Brief facts for the budget policy (LinkedIn below ₹15k etc). */
+  policy: { b2b: boolean; professional: boolean; goal: string };
+}
+
+export interface PlanShap {
+  method: "treeshap";
+  note: string;
+  channels: ChannelShap[];
+}
+
+export type RealityVerdict = "healthy" | "tight" | "likely_loss";
+
+/** One goal's click -> paying-customer conversion band (data/benchmarks.json, ESTIMATE). */
+export interface ConversionBenchmark {
+  goal: string;
+  /** Fractions 0-1. */
+  low: number;
+  typical: number;
+  high: number;
+}
+
+/** F8: can this budget pay for itself? Pure math on the brief + forecast clicks (ESTIMATE). */
+export interface RealityCheck {
+  price: number;
+  marginPct: number;
+  profitPerSale: number;
+  budget: number;
+  breakEvenUnits: number;
+  /** Forecast clicks the conversion rate is measured against (mid). */
+  clicks: number;
+  /** F14: the clicks range and the conversion rate needed across it (low clicks -> high rate). */
+  clicksRange?: ForecastRange;
+  requiredCvrRange?: { low: number; high: number };
+  /** breakEvenUnits / clicks as a fraction; null when the forecast has no clicks. */
+  requiredCvr: number | null;
+  benchmark: ConversionBenchmark;
+  /** requiredCvr / benchmark.typical; null when there are no clicks. */
+  ratio: number | null;
+  verdict: RealityVerdict;
+  headline: string;
+  detail: string;
+  advice: string;
+  /** Suggested smaller first test (tight / likely loss only). */
+  testBudget?: number;
+}
+
+/* ---------- v2 enrichment (client-safe types; logic lives in lib/enrich) ---------- */
+
+export type SignalStatus = "ok" | "skipped" | "timeout" | "error";
+
+/** One optional data source result. Never thrown; always returned. */
+export interface Signal<T> {
+  /** "site_readiness", "festival_calendar", "google_places", ... */
+  source: string;
+  status: SignalStatus;
+  /** ISO time of the original fetch (kept on cache hits). */
+  fetchedAt: string;
+  ms: number;
+  cached: boolean;
+  /** True when read from fixtures/api (ADPILOT_MOCK_APIS=1). Never shown as LIVE. */
+  mock?: boolean;
+  data?: T;
+  /** "no API key", "HTTP 403", ... */
+  reason?: string;
+}
+
+export type ReadinessCheckId =
+  | "https"
+  | "viewport"
+  | "meta_pixel"
+  | "ga4"
+  | "gtm"
+  | "whatsapp"
+  | "tel"
+  | "cta"
+  | "og_image";
+
+export interface ReadinessCheck {
+  id: ReadinessCheckId;
+  label: string;
+  state: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+/** F1: "Ready to spend?" The score is a heuristic (ESTIMATE); the checks are LIVE. */
+export interface SiteReadiness {
+  score: number;
+  checks: ReadinessCheck[];
+  /** Highest priority first. */
+  fixes: string[];
+  /** Tiny budget + weak site: send clicks to WhatsApp/DM instead of the site. */
+  funnelHint?: "whatsapp_dm";
+}
+
+export interface FestivalHit {
+  name: string;
+  /** ISO yyyy-mm-dd (main day). */
+  date: string;
+  /** Days from the plan start to the main day; negative = already started. */
+  daysAway: number;
+  states: string[];
+  /** ESTIMATE of festival-week CPM pressure (1.25 = +25%). */
+  cpmMultiplier: number;
+  advice: string;
+  verified: boolean;
+  /** Festival matters for this plan's category (CPM pressure applies regardless). */
+  relevant: boolean;
+  /** 1-based plan weeks this festival overlaps. */
+  weeks: number[];
+}
+
+/** F3: festival/season window for the plan's 4 weeks (static data, ESTIMATE). */
+export interface SeasonWindow {
+  state: string | null;
+  stateName: string | null;
+  windowStart: string;
+  windowEnd: string;
+  inWindow: FestivalHit[];
+  /** After the window, within the next 60 days. */
+  upcoming: FestivalHit[];
+  /** One per plan week; 1 = normal. */
+  weekMultipliers: number[];
+  weekFestivals: (string | null)[];
+}
+
+/** F1 part B: PageSpeed Insights v5, mobile. Fetched after render (deferred). */
+export interface PageSpeedResult {
+  url: string;
+  strategy: "mobile";
+  /** Lighthouse performance score, 0-100 (lab run). */
+  score: number;
+  /** Largest Contentful Paint from the lab run, ms. */
+  lcpMs: number;
+  /** Real-user (CrUX) LCP bucket when Google has field data for the page. */
+  fieldLcp?: "FAST" | "AVERAGE" | "SLOW";
+}
+
+/** One public business from Places Text Search (name + rating only; no address, phone or reviews). */
+export interface PlaceSummary {
+  name: string;
+  rating?: number;
+  reviews?: number;
+}
+
+/** F2: "{keyword} in {city}" competitors + whether the business itself is on Google Maps. */
+export interface LocalMarket {
+  /** The exact competitor query sent, e.g. "snack shop in Chennai". */
+  query: string;
+  keyword: string;
+  /** Places returned on the first page (max 20). */
+  count: number;
+  /** Google had more than one page: show "20+". */
+  more: boolean;
+  /** Mean rating of the rated places, 1 decimal; null when none are rated. */
+  avgRating: number | null;
+  ratedCount: number;
+  /** Up to 5, best rated among places with at least 10 reviews. */
+  top: PlaceSummary[];
+  own: {
+    query: string;
+    found: boolean;
+    name?: string;
+    mapsUri?: string;
+  };
+}
+
+/** F5: one public YouTube channel (no personal data; channel stats only). */
+export interface CreatorPick {
+  channelId: string;
+  title: string;
+  url: string;
+  subscribers: number;
+  videos: number;
+  views: number;
+  /** Channel country as set by the creator, when public. */
+  country?: string;
+  /** Channel title/description names the brief's city. */
+  cityMatch: boolean;
+  /** 0-100 ranking score (heuristic, ESTIMATE). */
+  fit: number;
+  /** Facts behind the pick, each from the API response. */
+  why: string[];
+}
+
+/** F5: "{topic} {city}" channel search → 2k-200k subscribers → top 5 by fit. */
+export interface CreatorFinder {
+  /** The exact search.list q sent. */
+  query: string;
+  topic: string;
+  /** relevanceLanguage, e.g. "ta". */
+  language: string;
+  /** Channels search.list returned. */
+  found: number;
+  /** Of those, how many had 2k-200k public subscribers. */
+  inBand: number;
+  picks: CreatorPick[];
+}
+
+/** Meta targeting_spec as sent to reachestimate (subset AdPilot builds). */
+export interface MetaTargetingSpec {
+  geo_locations: { cities: { key: string }[] };
+  age_min: number;
+  age_max: number;
+  flexible_spec?: { interests: { id: string; name: string }[] }[];
+  publisher_platforms: string[];
+}
+
+/** F4: Meta's monthly audience size for the brief's city + age + interests. */
+export interface AudienceEstimate {
+  city: { key: string; name: string; region?: string };
+  ageMin: number;
+  ageMax: number;
+  interests: { id: string; name: string }[];
+  /** Why interests were left out, e.g. under-18 targeting rules. */
+  interestsNote?: string;
+  targetingSpec: MetaTargetingSpec;
+  /** users_lower_bound / users_upper_bound from act_{id}/reachestimate. */
+  lower: number;
+  upper: number;
+  apiVersion: string;
+}
+
+export type ZeroRupeeId =
+  | "gbp"
+  | "gbp_reviews"
+  | "whatsapp_catalog"
+  | "organic_reels"
+  | "local_groups"
+  | "founder_linkedin";
+
+/** F10: one free action. `why` cites the signal or brief detail that triggered it. */
+export interface ZeroRupeeItem {
+  id: ZeroRupeeId;
+  title: string;
+  why: string;
+  steps: string[];
+  /** Signal sources quoted in `why` (badged in the UI); empty = from the brief only. */
+  sources: string[];
+}
+
+/**
+ * F7: one channel's launch instructions. Every number lives in a structured
+ * field; text fields are rendered from them (and may be reworded by an LLM,
+ * after which the grounding guard removes any number it cannot trace).
+ */
+export interface KitChannel {
+  channelId: ChannelId;
+  name: string;
+  budget: number;
+  percent: number;
+  /** One line, e.g. "Instagram Reels · ₹1,800 · Chennai 18-24 · 3 Reels Fri-Sun 6-10pm". */
+  headline: string;
+  targeting: {
+    text: string;
+    /** Exact Meta targeting spec, for Facebook/Instagram when the audience signal is ok. */
+    spec?: MetaTargetingSpec;
+  };
+  schedule: {
+    /** Short day names, e.g. ["Fri", "Sat", "Sun"]. */
+    days: string[];
+    /** 24h clock, start inclusive, end exclusive. */
+    startHour: number;
+    endHour: number;
+    /** Plan weeks to push harder (festival weeks); empty = even. */
+    pushWeeks: number[];
+    text: string;
+  };
+  creatives: {
+    count: number;
+    format: string;
+    /** Aspect ratio [w, h] and length range in seconds, when the format has them. */
+    aspect?: [number, number];
+    seconds?: [number, number];
+    text: string;
+  };
+  /** Search keywords (Google Search) or targeting interests/topics (others). */
+  keywords: string[];
+  checklist: string[];
+  metric: { name: string; why: string };
+  /** Signal sources this channel's kit used (badged in the UI). */
+  sources: string[];
+}
+
+export interface LaunchKit {
+  language: string;
+  channels: KitChannel[];
+  /** Who wrote the words: "template" or the LLM provider ("groq", "google"). Always English. */
+  wording: string;
+  /** Grounding guard over every generated text in the plan (kit + LLM copy). */
+  guard: { checked: number; removed: number; samples: string[]; nonEnglish?: number };
+}
+
+/** Every optional data source result attached to a plan (brief section 3). */
+export interface EnrichmentBundle {
+  siteReadiness: Signal<SiteReadiness>;
+  calendar: Signal<SeasonWindow>;
+  /* M2+: pageSpeed, localMarket, audience, creators, searchDemand */
+  /** Filled after render by the checkPageSpeed action; absent on the first response. */
+  pageSpeed?: Signal<PageSpeedResult>;
+  localMarket?: Signal<LocalMarket>;
+  audience?: Signal<AudienceEstimate>;
+  creators?: Signal<CreatorFinder>;
+  searchDemand?: Signal<unknown>;
+}
+
+export type TraceMeta = Record<string, string | number | boolean>;
+
+/** One agent step or tool call (F15). Times are ms from the trace start. */
+export interface TraceSpan {
+  name: string;
+  parent?: string;
+  startMs: number;
+  ms: number;
+  status: SignalStatus;
+  meta?: TraceMeta;
+  error?: string;
+}
+
+/** Live pipeline progress (streamed while a plan builds). Mirrors TraceSpan as it happens. */
+export interface TraceEvent {
+  name: string;
+  parent?: string;
+  status: "running" | SignalStatus;
+  /** ms since the run started. */
+  atMs: number;
+  /** Step duration; absent while running. */
+  ms?: number;
+  reason?: string;
+}
+
+/** NDJSON lines from POST /api/plan. */
+export type PlanStreamEvent =
+  | ({ type: "step" } & TraceEvent)
+  | { type: "done"; plan: PlanResult }
+  | { type: "error"; message: string };
+
+export interface PlanTrace {
+  startedAt: string;
+  totalMs: number;
+  spans: TraceSpan[];
 }
 
 export interface PlanListItem {

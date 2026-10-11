@@ -1,0 +1,166 @@
+{
+  "_note": "Real Places API (New) Text Search, \"snack shop in Chennai\", mask \"places.displayName,places.rating,places.userRatingCount,nextPageToken\", recorded 2026-10-10T18:23:29.992Z.",
+  "places": [
+    {
+      "rating": 4.4,
+      "userRatingCount": 33,
+      "displayName": {
+        "text": "Indian Snack House",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.4,
+      "userRatingCount": 171,
+      "displayName": {
+        "text": "Kovilpatti Murukku Kadai",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.9,
+      "userRatingCount": 38,
+      "displayName": {
+        "text": "Snack D`Lite",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.5,
+      "userRatingCount": 56,
+      "displayName": {
+        "text": "Nellai kuttam snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.5,
+      "userRatingCount": 1449,
+      "displayName": {
+        "text": "Suswaad Sweets and Savouries Pvt. Ltd.",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.7,
+      "userRatingCount": 302,
+      "displayName": {
+        "text": "Kovilpatti Murukku Kadai",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.2,
+      "userRatingCount": 23,
+      "displayName": {
+        "text": "Snackative - South Indian Snacks and Sweets",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4,
+      "userRatingCount": 82,
+      "displayName": {
+        "text": "Chennai Snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 5,
+      "userRatingCount": 15,
+      "displayName": {
+        "text": "Native Sweets and Snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.2,
+      "userRatingCount": 4434,
+      "displayName": {
+        "text": "Gangotree Sweets & Snacks - Gopalapuram",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.3,
+      "userRatingCount": 808,
+      "displayName": {
+        "text": "G Suryanarayana snacks centre",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.4,
+      "userRatingCount": 797,
+      "displayName": {
+        "text": "Kerala Hot Chips & Snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.7,
+      "userRatingCount": 57,
+      "displayName": {
+        "text": "Shri Sai Chats and Snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.9,
+      "userRatingCount": 60,
+      "displayName": {
+        "text": "MMM SNACKS",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.9,
+      "userRatingCount": 33,
+      "displayName": {
+        "text": "Kovilpatti Sweets & Snacks in online",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.9,
+      "userRatingCount": 140,
+      "displayName": {
+        "text": "AK Snacks Box",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.5,
+      "userRatingCount": 1165,
+      "displayName": {
+        "text": "Gandhiji sweets & snacks",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.5,
+      "userRatingCount": 13,
+      "displayName": {
+        "text": "CITY SNACKS",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.3,
+      "userRatingCount": 1314,
+      "displayName": {
+        "text": "GANGA HOT CHIPS",
+        "languageCode": "en"
+      }
+    },
+    {
+      "rating": 4.2,
+      "userRatingCount": 89,
+      "displayName": {
+        "text": "GANGA HOT CHIPS SWEETS AND SNACKS",
+        "languageCode": "en"
+      }
+    }
+  ],
+  "nextPageToken": "recorded-token-removed"
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "adpilot-enrichment",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Wire up Google Places so the dashboard shows how many similar businesses are near the user. I've put GOOGLE_PLACES_API_KEY in .env.local.",
+      "expected_output": "New lib/enrich/places.ts using runSource with requiresEnv GOOGLE_PLACES_API_KEY, a strict field mask, a 7d CACHE_TTL.places cache key prefixed google_places, a mockKey and a 5s timeout; an optional localMarket field on EnrichmentBundle; a task in runEnrichment; fixtures/api/google_places/default.json; a card with ProvenanceBadge; .env.example + README updated; tests for parse/skip/timeout/mock; a local commit only.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "PageSpeed takes 20 seconds sometimes. Add it to the readiness card without making plans slower.",
+      "expected_output": "PageSpeed implemented as a deferred source: a separate server action called by the dashboard after render, cached 24h (CACHE_TTL.pageSpeed), plan generation never awaits it, ReadinessCard fills in LCP/score with a LIVE badge or Not connected, plus a mock fixture and tests.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Add a static dataset of state-wise average cafe prices so the plan can mention it.",
+      "expected_output": "Static JSON under data/, a Signal built directly (no runSource), the source added to ESTIMATE_SOURCES so it is badged ESTIMATE and never LIVE, optional bundle field, tests, no fabricated live claims.",
+      "files": []
+    }
+  ]
+}

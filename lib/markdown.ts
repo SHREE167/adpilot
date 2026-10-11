@@ -1,3 +1,5 @@
+import { costBand } from "./creator-rates";
+import { rangeText, totalsRangesOf } from "./ranges";
 import { compactNumber, ctrPct, inr } from "./format";
 import type { PlanResult } from "./types";
 
@@ -14,7 +16,7 @@ export function planToMarkdown(plan: PlanResult): string {
   lines.push(`- **Budget:** ${inr(plan.input.budget)} / month`);
   lines.push(`- **Audience:** ${plan.input.audience_age} — ${plan.input.audience_notes}`);
   lines.push(`- **Goal:** ${plan.input.goal}`);
-  lines.push(`- **Language:** ${plan.input.language}`);
+  lines.push(`- **Audience language:** ${plan.input.language} (plan text is English)`);
   lines.push(`- **Category / tier:** ${plan.category} / ${plan.priceTier}`);
   lines.push(`- **LLM:** ${plan.llmUsed ? plan.llmProvider : "templates (no key)"}`);
   lines.push(`- **Scorer:** ${plan.scorer ?? "xgboost"}`);
@@ -38,17 +40,57 @@ export function planToMarkdown(plan: PlanResult): string {
     lines.push(`- Not scraped (${plan.site.scrapeError || "skipped"}). Used product_name.`);
   }
   lines.push("");
+  const rc = plan.realityCheck;
+  if (rc) {
+    const label = { healthy: "Healthy", tight: "Tight", likely_loss: "Likely loss" }[rc.verdict];
+    lines.push("## Reality check (ESTIMATE)");
+    lines.push("");
+    lines.push(`- **Verdict:** ${label}`);
+    lines.push(`- ${rc.headline} ${rc.detail}`);
+    lines.push(`- Price ${inr(rc.price)} × margin ${rc.marginPct}% = ${inr(rc.profitPerSale)} profit per sale; ${compactNumber(rc.clicks)} forecast clicks.`);
+    lines.push(`- ${rc.advice}`);
+    lines.push("");
+  }
+  const au = plan.enrichment?.audience;
+  if (au?.status === "ok" && au.data) {
+    const a = au.data;
+    lines.push(`## Who you can reach (Meta${au.mock ? ", MOCK" : ""})`);
+    lines.push("");
+    lines.push(`- **Pool:** ${compactNumber(a.lower)}-${compactNumber(a.upper)} people (${a.city.name}, age ${a.ageMin}-${a.ageMax}${a.interests.length ? `, ${a.interests.map((i) => i.name).join(", ")}` : ""})`);
+    if (a.interestsNote) lines.push(`- ${a.interestsNote}`);
+    lines.push("- **Targeting spec:**");
+    lines.push("");
+    lines.push("```json");
+    lines.push(JSON.stringify(a.targetingSpec, null, 2));
+    lines.push("```");
+    lines.push("");
+  }
+  const cr = plan.enrichment?.creators;
+  if (cr?.status === "ok" && cr.data?.picks.length) {
+    lines.push(`## Local voices (YouTube${cr.mock ? ", MOCK" : ""})`);
+    lines.push("");
+    lines.push(`Search "${cr.data.query}": ${cr.data.inBand} of ${cr.data.found} channels have 2k-200k subscribers.`);
+    lines.push("");
+    for (const c of cr.data.picks) {
+      const band = costBand(c.subscribers);
+      const cost = band ? ` Collab ${inr(band.low)}-${inr(band.high)} per video (ESTIMATE).` : "";
+      lines.push(`- [${c.title}](${c.url}): ${c.why.join(". ")}.${cost}`);
+    }
+    lines.push("");
+  }
   lines.push("## Forecast totals (ESTIMATE)");
   lines.push("");
-  lines.push(`| Metric | Value |`);
-  lines.push(`| --- | --- |`);
-  lines.push(`| Spend | ${inr(plan.totals.budget)} |`);
-  lines.push(`| Impressions | ${compactNumber(plan.totals.impressions)} |`);
-  lines.push(`| Clicks | ${compactNumber(plan.totals.clicks)} |`);
-  lines.push(`| Reach | ${compactNumber(plan.totals.reach)} |`);
-  lines.push(`| Conversions | ${plan.totals.conversions} |`);
-  lines.push(`| CPA | ${plan.totals.estimatedCpa ? inr(plan.totals.estimatedCpa) : "—"} |`);
-  lines.push(`| ROAS | ${plan.totals.estimatedRoas ?? "—"} |`);
+  const tr = totalsRangesOf(plan.totals, plan.mix.map((m) => m.forecast));
+  const conv = (n: number) => n.toFixed(1);
+  lines.push(`| Metric | Value | Range (low–high) |`);
+  lines.push(`| --- | --- | --- |`);
+  lines.push(`| Spend | ${inr(plan.totals.budget)} | — |`);
+  lines.push(`| Impressions | ${compactNumber(plan.totals.impressions)} | — |`);
+  lines.push(`| Clicks | ${compactNumber(plan.totals.clicks)} | ${rangeText(tr.clicks, compactNumber)} |`);
+  lines.push(`| Reach | ${compactNumber(plan.totals.reach)} | ${rangeText(tr.reach, compactNumber)} |`);
+  lines.push(`| Conversions | ${plan.totals.conversions} | ${rangeText(tr.conversions, conv)} |`);
+  lines.push(`| CPA | ${plan.totals.estimatedCpa ? inr(plan.totals.estimatedCpa) : "—"} | — |`);
+  lines.push(`| ROAS | ${plan.totals.estimatedRoas ?? "—"} | — |`);
   lines.push("");
   lines.push("## Channel mix");
   lines.push("");
@@ -77,6 +119,27 @@ export function planToMarkdown(plan: PlanResult): string {
       lines.push(`  - ${p.why}`);
     }
     lines.push("");
+  }
+  const kit = plan.launchKit;
+  if (kit?.channels.length) {
+    lines.push(`## Launch kit (${kit.wording === "template" ? "template wording" : `worded by ${kit.wording}`})`);
+    lines.push("");
+    if (kit.guard.checked) {
+      lines.push(`Grounding guard: ${kit.guard.checked} numbers checked, ${kit.guard.removed} removed.`);
+      lines.push("");
+    }
+    for (const c of kit.channels) {
+      lines.push(`### ${c.headline}`);
+      lines.push("");
+      lines.push(`- **Who:** ${c.targeting.text}`);
+      lines.push(`- **When:** ${c.schedule.text}`);
+      lines.push(`- **Make:** ${c.creatives.text}`);
+      if (c.keywords.length) lines.push(`- **Keywords:** ${c.keywords.join(", ")}`);
+      lines.push(`- **Watch:** ${c.metric.name}. ${c.metric.why}`);
+      lines.push("- **First week:**");
+      for (const t of c.checklist) lines.push(`  - [ ] ${t}`);
+      lines.push("");
+    }
   }
   lines.push("## Rejected / unused channels");
   lines.push("");

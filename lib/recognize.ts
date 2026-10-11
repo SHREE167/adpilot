@@ -1,5 +1,6 @@
 import "server-only";
 import { inferCategoryAndTier } from "@/lib/infer";
+import { ML_CATEGORIES } from "@/lib/ml/features";
 import type { PlanInput, ProductIntel, SiteSnapshot } from "@/lib/types";
 
 function evidenceFrom(site: SiteSnapshot, input: PlanInput): string[] {
@@ -27,7 +28,7 @@ function differentiators(input: PlanInput, site: SiteSnapshot): string[] {
   if (/premium|enterprise/i.test(blob)) found.push("premium / enterprise positioning");
   if (input.city) found.push(`city-local: ${input.city}`);
   if (input.language && !/^english$/i.test(input.language)) {
-    found.push(`${input.language}-first copy`);
+    found.push(`${input.language}-speaking audience`);
   }
   return found.slice(0, 5);
 }
@@ -83,10 +84,14 @@ export function mergeIntel(
   patch: Partial<ProductIntel> | null
 ): ProductIntel {
   if (!patch) return base;
+  const category =
+    patch.category && (ML_CATEGORIES as readonly string[]).includes(patch.category)
+      ? patch.category
+      : base.category;
   return {
     recognizedName: patch.recognizedName || base.recognizedName,
     summary: patch.summary || base.summary,
-    category: patch.category || base.category,
+    category,
     priceTier: patch.priceTier || base.priceTier,
     audience: patch.audience || base.audience,
     tone: patch.tone || base.tone,

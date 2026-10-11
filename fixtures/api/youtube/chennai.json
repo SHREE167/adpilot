@@ -1,0 +1,94 @@
+{
+  "fetchedAt": "2026-10-11T05:27:50.048Z",
+  "data": {
+    "query": "food Chennai",
+    "topic": "food",
+    "language": "ta",
+    "found": 25,
+    "inBand": 8,
+    "picks": [
+      {
+        "channelId": "UCzsvccfmoK148PRfW2KffKA",
+        "title": "Chennai Food Factory",
+        "url": "https://www.youtube.com/@chennaifoodfactory",
+        "subscribers": 13600,
+        "videos": 499,
+        "views": 1198981,
+        "country": "IN",
+        "cityMatch": true,
+        "fit": 85,
+        "why": [
+          "Names Chennai on the channel",
+          "Channel is about food",
+          "13.6k subscribers: a real local following",
+          "499 videos posted"
+        ]
+      },
+      {
+        "channelId": "UC9XEqLinkZwdbT8jpz9oqgw",
+        "title": "Chennai Food community",
+        "url": "https://www.youtube.com/@chennaifoodcommunity",
+        "subscribers": 66800,
+        "videos": 904,
+        "views": 58160615,
+        "cityMatch": true,
+        "fit": 82,
+        "why": [
+          "Names Chennai on the channel",
+          "Channel is about food",
+          "66.8k subscribers: big reach for a local collab",
+          "904 videos posted"
+        ]
+      },
+      {
+        "channelId": "UCxMu1yJD1MsaMug3QK9XAQA",
+        "title": "Food Of Chennai",
+        "url": "https://www.youtube.com/@foodofchennai",
+        "subscribers": 14100,
+        "videos": 569,
+        "views": 10221563,
+        "cityMatch": true,
+        "fit": 80,
+        "why": [
+          "Names Chennai on the channel",
+          "Channel is about food",
+          "14.1k subscribers: a real local following",
+          "569 videos posted"
+        ]
+      },
+      {
+        "channelId": "UCw8V9pKPQO1GJ-W59DfjfcA",
+        "title": "chennai food court",
+        "url": "https://www.youtube.com/@chennaifoodcourt2411",
+        "subscribers": 8780,
+        "videos": 925,
+        "views": 7167337,
+        "cityMatch": true,
+        "fit": 80,
+        "why": [
+          "Names Chennai on the channel",
+          "Channel is about food",
+          "8.8k subscribers: small enough to reply to a DM",
+          "925 videos posted"
+        ]
+      },
+      {
+        "channelId": "UClaPk0RgykzO6j7Vadp_8eQ",
+        "title": "Chennai Food Walks",
+        "url": "https://www.youtube.com/@chennaifoodwalks3443",
+        "subscribers": 17100,
+        "videos": 46,
+        "views": 12357463,
+        "country": "IN",
+        "cityMatch": true,
+        "fit": 79,
+        "why": [
+          "Names Chennai on the channel",
+          "Channel is about food",
+          "17.1k subscribers: a real local following",
+          "46 videos posted"
+        ]
+      }
+    ]
+  }
+}

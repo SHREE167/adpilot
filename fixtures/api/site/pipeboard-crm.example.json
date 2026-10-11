@@ -1,0 +1,7 @@
+{
+  "fetchedAt": "2026-10-11T06:00:00.000Z",
+  "data": {
+    "url": "https://pipeboard-crm.example/",
+    "html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Pipeboard | Inbound-to-demo CRM for Indian B2B teams</title><meta name=\"description\" content=\"Route every inbound lead to a booked demo. Built for SaaS and IT services sales teams in India.\"><meta property=\"og:image\" content=\"https://pipeboard-crm.example/og.jpg\"><script async src=\"https://www.googletagmanager.com/gtag/js?id=G-PB12345XY\"></script><script>gtag('config','G-PB12345XY');</script><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"SoftwareApplication\",\"name\":\"Pipeboard\"}</script></head><body><h1>From inbound lead to booked demo in minutes</h1><p>Pipeboard is a CRM for founders, sales heads and RevOps at 10 to 200 person B2B teams. Free 14-day trial.</p><a href=\"/demo\">Book a demo</a></body></html>"
+  }
+}

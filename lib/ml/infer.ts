@@ -1,11 +1,12 @@
 import "server-only";
+import { describeFeature } from "@/lib/ml/feature-labels";
 import { ML_FEATURE_NAMES } from "@/lib/ml/features";
-import type { ChannelId } from "@/lib/types";
+import { hasCover, shapValues, type ShapNode } from "@/lib/ml/shap";
+import type { ChannelId, ChannelShap } from "@/lib/types";
 import modelJson from "../../ml/model.json";
 
-type TreeNode =
-  | { leaf: number }
-  | { feature: string; index: number; threshold: number; yes: TreeNode; no: TreeNode };
+/** Exported XGBoost node; `cover` (training rows reaching it) drives TreeSHAP. */
+type TreeNode = ShapNode;
 
 interface ChannelModel {
   base_score: number;
@@ -23,10 +24,11 @@ interface SavedModel {
   mean_r2: number;
   mean_mae: number;
   models: Record<string, ChannelModel>;
+  node_stats?: string;
   self_check: { x: number[]; y: number[] }[];
 }
 
-const MODEL = modelJson as SavedModel;
+const MODEL = modelJson as unknown as SavedModel;
 
 function walk(node: TreeNode, x: number[]): number {
   if ("leaf" in node) return node.leaf;
@@ -34,12 +36,17 @@ function walk(node: TreeNode, x: number[]): number {
   return v < node.threshold ? walk(node.yes, x) : walk(node.no, x);
 }
 
-export function predictChannelScore(channelId: ChannelId, x: number[]): number {
+/** Raw model output (base_score + Σ leaves), not clamped. SHAP explains this. */
+export function rawChannelScore(channelId: ChannelId, x: number[]): number {
   const m = MODEL.models[channelId];
   if (!m) return 0;
   let s = m.base_score;
   for (const tree of m.trees) s += walk(tree, x);
-  return Math.max(0, Math.min(100, s));
+  return s;
+}
+
+export function predictChannelScore(channelId: ChannelId, x: number[]): number {
+  return Math.max(0, Math.min(100, rawChannelScore(channelId, x)));
 }
 
 export function predictAllScores(x: number[]): Record<ChannelId, number> {
@@ -50,30 +57,47 @@ export function predictAllScores(x: number[]): Record<ChannelId, number> {
   return out;
 }
 
-export function explainScore(channelId: ChannelId, x: number[], k = 3): string[] {
+/**
+ * Exact TreeSHAP for one channel: base (expected score over the training
+ * cover) → top drivers → the remaining features summed → raw prediction.
+ * base + Σ drivers + other == prediction.
+ */
+export function shapForChannel(channelId: ChannelId, x: number[], top = 5): Omit<ChannelShap, "score"> {
   const m = MODEL.models[channelId];
-  if (!m) return ["XGBoost model missing for this channel"];
-  const base = predictChannelScore(channelId, x);
-  const ranked = Object.entries(m.importances)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-  const deltas: { name: string; delta: number }[] = [];
-  for (const [name] of ranked) {
-    const i = ML_FEATURE_NAMES.indexOf(name);
-    if (i < 0) continue;
-    const x0 = x.slice();
-    x0[i] = 0;
-    deltas.push({ name, delta: base - predictChannelScore(channelId, x0) });
-  }
-  deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  const reasons = [
-    `XGBoost score ${Math.round(base)}/100`,
-    ...deltas.slice(0, k).map((d) => {
-      const dir = d.delta >= 0 ? "lifts" : "lowers";
-      return `${d.name} ${dir} this channel (${d.delta >= 0 ? "+" : ""}${d.delta.toFixed(1)})`;
+  if (!m) return { channelId, base: 0, prediction: 0, drivers: [], other: 0, otherCount: 0 };
+  const { base, phi, prediction } = shapValues(m, x, ML_FEATURE_NAMES.length);
+  const ranked = phi
+    .map((value, i) => ({ i, value }))
+    .filter((d) => Math.abs(d.value) > 1e-9)
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const drivers = ranked.slice(0, top).map(({ i, value }) => ({
+    feature: ML_FEATURE_NAMES[i],
+    label: describeFeature(ML_FEATURE_NAMES[i], x[i]),
+    value,
+  }));
+  const rest = ranked.slice(top);
+  return {
+    channelId,
+    base,
+    prediction,
+    drivers,
+    other: rest.reduce((s, d) => s + d.value, 0),
+    otherCount: rest.length,
+  };
+}
+
+/** Score + the k strongest SHAP drivers as short reasons (signature kept from v1). */
+export function explainScore(channelId: ChannelId, x: number[], k = 3): string[] {
+  if (!MODEL.models[channelId]) return ["XGBoost model missing for this channel"];
+  const s = shapForChannel(channelId, x, k);
+  const score = Math.round(Math.max(0, Math.min(100, s.prediction)));
+  return [
+    `XGBoost score ${score}/100 (average ${s.base.toFixed(1)})`,
+    ...s.drivers.map((d) => {
+      const dir = d.value >= 0 ? "lifts" : "lowers";
+      return `${d.label} ${dir} this channel (${d.value >= 0 ? "+" : ""}${d.value.toFixed(1)})`;
     }),
   ];
-  return reasons;
 }
 
 export function modelCard(): {
@@ -97,13 +121,23 @@ export function assertModelSelfCheck(): void {
   if (MODEL.feature_names.join("|") !== ML_FEATURE_NAMES.join("|")) {
     throw new Error("XGBoost feature_names do not match lib/ml/features.ts");
   }
+  for (const ch of MODEL.channels) {
+    if (!MODEL.models[ch].trees.every(hasCover)) {
+      throw new Error(`XGBoost model has no per-node cover for ${ch}; retrain with ml/train.py`);
+    }
+  }
   for (const row of MODEL.self_check) {
     for (let i = 0; i < MODEL.channels.length; i++) {
-      const got = predictChannelScore(MODEL.channels[i], row.x);
+      const ch = MODEL.channels[i];
+      const got = predictChannelScore(ch, row.x);
       if (Math.abs(got - row.y[i]) > 0.05) {
-        throw new Error(
-          `XGBoost self-check failed on ${MODEL.channels[i]}: ${got} vs ${row.y[i]}`
-        );
+        throw new Error(`XGBoost self-check failed on ${ch}: ${got} vs ${row.y[i]}`);
+      }
+      // TreeSHAP must add up exactly: base + Σ phi == raw prediction.
+      const { base, phi, prediction } = shapValues(MODEL.models[ch], row.x, ML_FEATURE_NAMES.length);
+      const sum = base + phi.reduce((s, p) => s + p, 0);
+      if (Math.abs(sum - prediction) > 1e-3 || Math.abs(prediction - rawChannelScore(ch, row.x)) > 1e-9) {
+        throw new Error(`TreeSHAP additivity failed on ${ch}: ${sum} vs ${prediction}`);
       }
     }
   }

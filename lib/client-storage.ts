@@ -53,17 +53,6 @@ export function getPlanLocal(id: string): PlanResult | null {
   return null;
 }
 
-export function getLastLocal(): PlanResult | null {
-  if (memoryLast) return memoryLast;
-  if (!canUseDom()) return null;
-  try {
-    const last = localStorage.getItem(LAST_KEY);
-    return last ? (JSON.parse(last) as PlanResult) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function mergeLists(
   server: PlanListItem[],
   local: PlanListItem[]

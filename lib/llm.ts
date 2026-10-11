@@ -1,5 +1,6 @@
 import "server-only";
 import type { CreativeFill } from "./copy-templates";
+import { isMockMode, readFixture } from "./enrich/mock";
 import type {
   ChannelAllocation,
   PlanInput,
@@ -8,7 +9,14 @@ import type {
   SiteSnapshot,
 } from "./types";
 
-const LLM_TIMEOUT_MS = 6000;
+/** Whole-chain budgets (Groq attempt + Gemini fallback share it). */
+const COPY_BUDGET_MS = 7000;
+const RECOGNIZE_BUDGET_MS = 4500;
+const KIT_BUDGET_MS = 8000;
+/** Groq's share of the budget before Gemini gets the rest. */
+const PRIMARY_SHARE = 0.6;
+/** Do not start a fallback with less time than this. */
+const MIN_FALLBACK_MS = 1200;
 
 export interface LlmResult {
   used: boolean;
@@ -17,38 +25,115 @@ export interface LlmResult {
   product: Partial<ProductIntel> | null;
 }
 
-function firstKey(): { provider: string; key: string; url: string; model: string } | null {
+export type LlmProviderId = "groq" | "google";
+
+export interface LlmProvider {
+  provider: LlmProviderId;
+  key: string;
+  url: string;
+  model: string;
+}
+
+/**
+ * Which provider goes first, per task: Gemini writes the launch-kit rewrite and ad
+ * copy (gpt-oss-20b echoed its input in every recording); Groq stays first for
+ * product recognition, which it handles fine.
+ */
+export type LlmOrder = "groq-first" | "gemini-first";
+
+/** Configured providers in the given order. Keys from process.env only. No OpenAI. */
+export function llmProviders(order: LlmOrder = "groq-first"): LlmProvider[] {
+  const out: LlmProvider[] = [];
   const groq = process.env.GROQ_API_KEY;
   if (groq) {
-    return {
+    out.push({
       provider: "groq",
       key: groq,
       url: "https://api.groq.com/openai/v1/chat/completions",
-      model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
-    };
-  }
-  const openai = process.env.OPENAI_API_KEY;
-  if (openai) {
-    return {
-      provider: "openai",
-      key: openai,
-      url: "https://api.openai.com/v1/chat/completions",
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-    };
+      // Llama models moved to Groq's Enterprise tier (404 on free keys, Oct 2026).
+      model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
+    });
   }
   const google = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   if (google) {
-    return {
+    // gemini-2.0-flash is shut down; 3.5 Flash-Lite is the fast, low-cost stable model.
+    const model = process.env.GOOGLE_MODEL || "gemini-3.5-flash-lite";
+    out.push({
       provider: "google",
       key: google,
-      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-      model: process.env.GOOGLE_MODEL || "gemini-2.0-flash",
-    };
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      model,
+    });
   }
-  return null;
+  return order === "gemini-first" ? out.reverse() : out;
 }
 
-function extractJson(text: string): unknown {
+/** One provider call. Exported for the fixture recorder. Throws on HTTP/empty errors. */
+export async function callProvider(
+  p: LlmProvider,
+  prompt: string,
+  signal: AbortSignal,
+  maxTokens: number
+): Promise<string> {
+  return p.provider === "google"
+    ? googleGenerate(p.url, p.key, prompt, signal, maxTokens)
+    : openAiCompat(p.url, p.key, p.model, prompt, signal, maxTokens);
+}
+
+export interface Generated<T> {
+  provider: LlmProviderId;
+  model: string;
+  content: string;
+  value: T;
+  /** Providers that failed before this one, with the reason. */
+  failed: { provider: LlmProviderId; reason: string }[];
+}
+
+/**
+ * Groq → Gemini. Each attempt is time-boxed inside one budget; a failure,
+ * timeout or unparseable answer moves on to the next provider. Returns null
+ * when no provider is configured or all fail. Never throws.
+ */
+export async function generate<T>(
+  prompt: string,
+  opts: { budgetMs: number; maxTokens: number; parse: (content: string) => T | null; order?: LlmOrder }
+): Promise<Generated<T> | { failed: { provider: LlmProviderId; reason: string }[] } | null> {
+  const list = llmProviders(opts.order);
+  if (!list.length) return null;
+  const t0 = Date.now();
+  const failed: { provider: LlmProviderId; reason: string }[] = [];
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    const left = opts.budgetMs - (Date.now() - t0);
+    const last = i === list.length - 1;
+    const slice = last ? left : Math.max(MIN_FALLBACK_MS, Math.round(opts.budgetMs * PRIMARY_SHARE));
+    if (left < MIN_FALLBACK_MS) {
+      failed.push({ provider: p.provider, reason: "no time left" });
+      break;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(slice, left));
+    try {
+      const content = await callProvider(p, prompt, controller.signal, opts.maxTokens);
+      const value = opts.parse(content);
+      if (value === null || value === undefined) throw new Error("unusable JSON");
+      if (value instanceof EchoError) throw value;
+      return { provider: p.provider, model: p.model, content, value, failed };
+    } catch (err) {
+      const reason = controller.signal.aborted ? "timeout" : err instanceof Error ? err.message.slice(0, 80) : "error";
+      failed.push({ provider: p.provider, reason });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return { failed };
+}
+
+function isGenerated<T>(r: Awaited<ReturnType<typeof generate<T>>>): r is Generated<T> {
+  return Boolean(r && "value" in r);
+}
+
+export function extractJson(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1] : trimmed;
@@ -152,7 +237,7 @@ function buildPrompt(
     },
     city: input.city,
     goal: input.goal,
-    language: input.language,
+    audience_language: input.language,
     audience_age: input.audience_age,
     audience_notes: input.audience_notes,
     mix: mix.map((m) => ({
@@ -165,7 +250,7 @@ function buildPrompt(
   };
   return `You are AdPilot. You already READ the product. Write as if you know it — never generic "try our product".
 Do NOT change any numbers, scores, or budget splits.
-Write in ${input.language}.
+Write everything in standard English: no Hinglish, no Hindi/Tamil/other Indian-language words or scripts. audience_language only describes the buyers; do not write in it.
 Return ONLY JSON:
 {
   "product": {
@@ -187,6 +272,7 @@ Rules:
 - mention the actual product name and one concrete detail (flavour, workflow, city, price cue)
 - exactly 3 adAngles, exactly 8 outreach scripts
 - no live-ad claims, no guaranteed ROAS
+- do not invent numbers: no discounts, prices, percentages, counts, times or results that are not in the brief or mix below. Write {{offer}} or {{price}} where the owner must fill one in
 Brief + mix:
 ${JSON.stringify(computed)}`;
 }
@@ -196,7 +282,8 @@ async function openAiCompat(
   key: string,
   model: string,
   prompt: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxTokens = 1800
 ): Promise<string> {
   const res = await fetch(url, {
     method: "POST",
@@ -208,7 +295,9 @@ async function openAiCompat(
     body: JSON.stringify({
       model,
       temperature: 0.6,
-      max_tokens: 1800,
+      max_tokens: maxTokens,
+      // gpt-oss models reason first; keep that short so the JSON fits the budget.
+      ...(/gpt-oss/.test(model) ? { reasoning_effort: "low" } : {}),
       messages: [
         {
           role: "system",
@@ -233,41 +322,49 @@ async function googleGenerate(
   url: string,
   key: string,
   prompt: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxTokens = 1800
 ): Promise<string> {
-  const res = await fetch(`${url}?key=${encodeURIComponent(key)}`, {
+  // Key in a header, never in the URL.
+  const res = await fetch(url, {
     method: "POST",
     signal,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.6,
-        maxOutputTokens: 1800,
+        maxOutputTokens: maxTokens,
         responseMimeType: "application/json",
       },
     }),
   });
   if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
   const json = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
   };
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+  const parts = json.candidates?.[0]?.content?.parts || [];
+  const text = parts
+    .filter((p) => !p.thought && p.text)
+    .map((p) => p.text)
+    .join("");
   if (!text) throw new Error("Empty Gemini content");
   return text;
+}
+
+function failNote(r: { failed: { provider: string; reason: string }[] } | null): string | null {
+  return r && r.failed.length ? r.failed.map((f) => `${f.provider}: ${f.reason}`).join("; ") : null;
 }
 
 export async function recognizeWithLlm(
   input: PlanInput,
   site: SiteSnapshot,
   heuristic: ProductIntel
-): Promise<{ used: boolean; provider: string | null; product: Partial<ProductIntel> | null }> {
-  const cfg = firstKey();
-  if (!cfg) return { used: false, provider: null, product: null };
+): Promise<{ used: boolean; provider: string | null; product: Partial<ProductIntel> | null; fallback?: string }> {
   const prompt = `Read this India product and return JSON only:
 {
   "recognizedName": "",
-  "summary": "2-3 sentences, facts only",
+  "summary": "2-3 sentences in English, facts only",
   "category": "food|saas|education|fashion|health|finance|ecommerce|local_service|entertainment|general",
   "priceTier": "low|mid|high|enterprise",
   "audience": "",
@@ -277,24 +374,20 @@ export async function recognizeWithLlm(
   "confidence": 0.0
 }
 Do not invent a page you were not given. If scrape failed, use the form.
+category = what the business SELLS, never who buys it. Audience words (college students, parents, founders) do not set the category.
+Examples: "streetwear tees for college students" → fashion; "sweet shop" → food; "coding bootcamp" → education; "salon" → local_service.
 Heuristic guess: ${JSON.stringify(heuristic)}
-Form: ${JSON.stringify({ product_name: input.product_name, city: input.city, goal: input.goal, audience_age: input.audience_age, audience_notes: input.audience_notes, language: input.language })}
+Form: ${JSON.stringify({ product_name: input.product_name, city: input.city, goal: input.goal, audience_age: input.audience_age, audience_notes: input.audience_notes, audience_language: input.language })}
 Site: ${JSON.stringify({ title: site.title, description: site.description, h1: site.h1, jsonLdName: site.jsonLdName, jsonLdType: site.jsonLdType, excerpt: site.textExcerpt?.slice(0, 500), scraped: site.scraped })}`;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4500);
-  try {
-    const text =
-      cfg.provider === "google"
-        ? await googleGenerate(cfg.url, cfg.key, prompt, controller.signal)
-        : await openAiCompat(cfg.url, cfg.key, cfg.model, prompt, controller.signal);
-    const product = asProduct(extractJson(text));
-    return { used: Boolean(product), provider: cfg.provider, product };
-  } catch {
-    return { used: false, provider: cfg.provider, product: null };
-  } finally {
-    clearTimeout(timer);
-  }
+  const r = await generate(prompt, {
+    budgetMs: RECOGNIZE_BUDGET_MS,
+    maxTokens: 1800,
+    parse: (c) => asProduct(extractJson(c)),
+  });
+  if (!r) return { used: false, provider: null, product: null };
+  const note = failNote(r);
+  if (!isGenerated(r)) return { used: false, provider: null, product: null, ...(note ? { fallback: note } : {}) };
+  return { used: true, provider: r.provider, product: r.value, ...(note ? { fallback: note } : {}) };
 }
 
 export async function fillWithLlm(
@@ -302,29 +395,23 @@ export async function fillWithLlm(
   mix: ChannelAllocation[],
   intel: ProductIntel,
   site: SiteSnapshot
-): Promise<LlmResult> {
-  const cfg = firstKey();
-  if (!cfg) return { used: false, provider: null, fill: null, product: null };
-
-  const prompt = buildPrompt(input, mix, intel, site);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
-
-  try {
-    const text =
-      cfg.provider === "google"
-        ? await googleGenerate(cfg.url, cfg.key, prompt, controller.signal)
-        : await openAiCompat(cfg.url, cfg.key, cfg.model, prompt, controller.signal);
-    const parsed = extractJson(text);
-    const fill = asFill(parsed, mix);
-    const product = asProduct(parsed);
-    if (!fill) return { used: false, provider: cfg.provider, fill: null, product };
-    return { used: true, provider: cfg.provider, fill, product };
-  } catch {
-    return { used: false, provider: cfg.provider, fill: null, product: null };
-  } finally {
-    clearTimeout(timer);
+): Promise<LlmResult & { fallback?: string }> {
+  const r = await generate(buildPrompt(input, mix, intel, site), {
+    budgetMs: COPY_BUDGET_MS,
+    order: "gemini-first",
+    maxTokens: 3000,
+    parse: (c) => {
+      const parsed = extractJson(c);
+      const fill = asFill(parsed, mix);
+      return fill ? { fill, product: asProduct(parsed) } : null;
+    },
+  });
+  if (!r) return { used: false, provider: null, fill: null, product: null };
+  const note = failNote(r);
+  if (!isGenerated(r)) {
+    return { used: false, provider: null, fill: null, product: null, ...(note ? { fallback: note } : {}) };
   }
+  return { used: true, provider: r.provider, fill: r.value.fill, product: r.value.product, ...(note ? { fallback: note } : {}) };
 }
 
 export function mergeCreative(
@@ -340,4 +427,136 @@ export function mergeCreative(
   const adAngles = (llm?.adAngles?.length ? [...llm.adAngles, ...base.adAngles] : base.adAngles).slice(0, 3);
   const outreach = (llm?.outreach?.length ? [...llm.outreach, ...base.outreach] : base.outreach).slice(0, 8);
   return { mix: nextMix, adAngles, outreach };
+}
+
+/** F7: fixture source for the launch-kit rewrite in mock mode (recorded from one real call). */
+export const KIT_LLM_SOURCE = "llm_launch_kit";
+export const KIT_MAX_TOKENS = 6000;
+
+export interface KitRewrite {
+  used: boolean;
+  provider: string | null;
+  texts: Record<string, string> | null;
+  /** True when the words came from a recorded fixture (ADPILOT_MOCK_APIS=1). */
+  mock?: boolean;
+  /** Providers that failed first, e.g. "groq: timeout". */
+  fallback?: string;
+}
+
+/** Prompt for the tone-only rewrite, English only. Numbers are frozen; the guard enforces it afterwards. */
+export function kitRewritePrompt(texts: Record<string, string>, input: PlanInput, tone: string): string {
+  return `Rewrite these launch-kit lines for the owner of "${input.product_name}" in ${input.city}.
+Write in standard, simple English, the way you would explain it to a busy shop owner. No Hinglish, no Hindi/Tamil/other Indian-language words or scripts. Tone: ${tone}; short and direct.
+Make each line sound like a person talking; do not just copy it.
+Rules:
+- keep each line's meaning and instructions
+- keep every number exactly as written (prices, ages, times, counts, dates)
+- do NOT add any new number, price, percentage, date, time, discount or claim
+- keep brand names, channel names, place names and quoted search terms as written
+Return JSON only: {"texts": {"<same key>": "<rewritten line>"}} with every key below.
+Lines:
+${JSON.stringify(texts)}`;
+}
+
+export function asTexts(data: unknown, keys: string[]): Record<string, string> | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  const src = (obj.texts && typeof obj.texts === "object" ? obj.texts : obj) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const k of keys) {
+    const v = src[k];
+    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 400);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Recorded LLM response shape in fixtures/api/<source>/<product>.json. */
+export interface RecordedLlm {
+  provider: string;
+  model: string;
+  content: string;
+}
+
+/** Recorded kit rewrites replayed in mock mode, per provider. */
+export const KIT_FIXTURE_SOURCE: Record<LlmProviderId, string> = {
+  google: "llm_gemini",
+  groq: KIT_LLM_SOURCE,
+};
+
+/** Share of unchanged lines at which a rewrite counts as an echo (a failure). */
+export const ECHO_SHARE = 0.8;
+
+class EchoError extends Error {}
+
+function sameLine(a: string, b: string): boolean {
+  const n = (s: string) => s.replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+  return n(a) === n(b);
+}
+
+/** Pure: how many reworded lines equal their input (hyphen/space/case-insensitive). */
+export function echoShare(input: Record<string, string>, output: Record<string, string>): number {
+  const keys = Object.keys(output).filter((k) => k in input);
+  if (!keys.length) return 0;
+  return keys.filter((k) => sameLine(input[k], output[k])).length / keys.length;
+}
+
+/**
+ * Parses a kit rewrite. Returns null when unusable and an EchoError when the
+ * model returned the lines (almost) unchanged, so generate() moves on.
+ */
+export function parseKitRewrite(
+  content: string,
+  input: Record<string, string>
+): Record<string, string> | EchoError | null {
+  const out = asTexts(extractJson(content), Object.keys(input));
+  if (!out) return null;
+  const share = echoShare(input, out);
+  if (share >= ECHO_SHARE) return new EchoError(`echo (${Math.round(share * 100)}% of lines unchanged)`);
+  return out;
+}
+
+/**
+ * F7: rewords the deterministic kit for tone (English only). Gemini first, Groq
+ * on failure, timeout or echo. Mock mode replays the recorded responses in the
+ * same order with the same rules (or keeps the template). Never throws.
+ */
+export async function rewriteLaunchKit(
+  texts: Record<string, string>,
+  input: PlanInput,
+  tone: string
+): Promise<KitRewrite> {
+  if (isMockMode()) {
+    const failed: string[] = [];
+    for (const id of ["google", "groq"] as const) {
+      const fx = await readFixture<RecordedLlm>(KIT_FIXTURE_SOURCE[id], input.product_name);
+      if (!fx) continue;
+      let parsed: Record<string, string> | EchoError | null = null;
+      try {
+        parsed = parseKitRewrite(fx.data.content, texts);
+      } catch {
+        parsed = null;
+      }
+      if (parsed && !(parsed instanceof EchoError)) {
+        return {
+          used: true,
+          provider: id,
+          texts: parsed,
+          mock: true,
+          ...(failed.length ? { fallback: failed.join("; ") } : {}),
+        };
+      }
+      failed.push(`${id}: ${parsed instanceof EchoError ? parsed.message : "unusable JSON"}`);
+    }
+    return { used: false, provider: null, texts: null, ...(failed.length ? { mock: true, fallback: failed.join("; ") } : {}) };
+  }
+  const r = await generate(kitRewritePrompt(texts, input, tone), {
+    budgetMs: KIT_BUDGET_MS,
+    maxTokens: KIT_MAX_TOKENS,
+    order: "gemini-first",
+    parse: (c) => parseKitRewrite(c, texts) as Record<string, string> | null,
+  });
+  if (!r) return { used: false, provider: null, texts: null };
+  const note = failNote(r);
+  if (!isGenerated(r)) return { used: false, provider: null, texts: null, ...(note ? { fallback: note } : {}) };
+  return { used: true, provider: r.provider, texts: r.value, ...(note ? { fallback: note } : {}) };
 }

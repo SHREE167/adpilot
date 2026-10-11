@@ -515,11 +515,3 @@ function whyLine(row: CatalogRow, input: PlanInput, product: ProductIntel): stri
   }
   return `Specific inventory for ${row.channelId.replace(/_/g, " ")} — ${p} in ${input.city}.`;
 }
-
-export function googleSites(placements: PlacementPick[]): PlacementPick[] {
-  return placements.filter((p) => p.kind === "google_site");
-}
-
-export function googleApps(placements: PlacementPick[]): PlacementPick[] {
-  return placements.filter((p) => p.kind === "google_app");
-}

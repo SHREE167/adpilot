@@ -1,6 +1,7 @@
 import "server-only";
+import { isMockMode, readFixture } from "./enrich/mock";
 import { normalizeDomain } from "./format";
-import type { SiteSnapshot } from "./types";
+import type { SiteSnapshot, TrackingSignals } from "./types";
 
 const TIMEOUT_MS = 4000;
 
@@ -79,6 +80,56 @@ function parseHtml(html: string): Pick<
   };
 }
 
+const CTA_WORDS =
+  /\b(order|buy|shop now|call|book|enquire|enquiry|get a quote|contact us|whatsapp us|chat with us)\b/i;
+
+/**
+ * F1 part A: tracking + funnel detection on the raw HTML (no key needed).
+ * GTM can inject a pixel we cannot see statically, so callers must treat
+ * "GTM present, no pixel" as unknown, never as "no pixel".
+ */
+export function detectTracking(html: string, finalUrl: string): TrackingSignals {
+  const gtmIds = [...new Set(html.match(/\bGTM-[A-Z0-9]{4,9}\b/g) || [])];
+  const ctaBlocks = [...html.matchAll(/<(a|button)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0, 400);
+  return {
+    https: /^https:\/\//i.test(finalUrl),
+    viewport: /<meta[^>]+name=["']viewport["']/i.test(html),
+    metaPixel: /\bfbq\s*\(|connect\.facebook\.net\/[^"']*fbevents\.js/i.test(html),
+    ga4: /\bgtag\s*\(|googletagmanager\.com\/gtag\/js|\bG-[A-Z0-9]{6,12}\b/.test(html),
+    gtmIds,
+    whatsapp: /wa\.me\/|api\.whatsapp\.com\/send|whatsapp:\/\/send/i.test(html),
+    tel: /href=["']tel:/i.test(html),
+    cta: ctaBlocks.some((m) => CTA_WORDS.test(stripTags(m[2] || ""))),
+    ogImage: Boolean(metaContent(html, "og:image")),
+  };
+}
+
+function snapshotFromHtml(
+  host: string,
+  url: string,
+  html: string,
+  productName: string,
+  mock = false
+): SiteSnapshot {
+  const parsed = parseHtml(html);
+  return {
+    domain: host,
+    url,
+    title: parsed.title || productName || null,
+    description: parsed.description,
+    h1: parsed.h1,
+    ogTitle: parsed.ogTitle,
+    ogImage: parsed.ogImage,
+    jsonLdName: parsed.jsonLdName,
+    jsonLdType: parsed.jsonLdType,
+    textExcerpt: parsed.textExcerpt,
+    scraped: true,
+    fetchedAt: new Date().toISOString(),
+    ...(mock ? { mock: true } : {}),
+    tracking: detectTracking(html, url),
+  };
+}
+
 export async function scrapeSite(
   domain: string,
   productName: string
@@ -99,6 +150,13 @@ export async function scrapeSite(
       scraped: false,
       scrapeError: "No domain provided; continuing with product_name",
     };
+  }
+
+  if (isMockMode()) {
+    const fx = await readFixture<{ url?: string; html: string }>("site", host);
+    if (fx?.data?.html) {
+      return snapshotFromHtml(host, fx.data.url || `https://${host}`, fx.data.html, productName, true);
+    }
   }
 
   const skip =
@@ -155,20 +213,7 @@ export async function scrapeSite(
       };
     }
     const html = await res.text();
-    const parsed = parseHtml(html);
-    return {
-      domain: host,
-      url,
-      title: parsed.title || productName || null,
-      description: parsed.description,
-      h1: parsed.h1,
-      ogTitle: parsed.ogTitle,
-      ogImage: parsed.ogImage,
-      jsonLdName: parsed.jsonLdName,
-      jsonLdType: parsed.jsonLdType,
-      textExcerpt: parsed.textExcerpt,
-      scraped: true,
-    };
+    return snapshotFromHtml(host, res.url || url, html, productName);
   } catch (err) {
     const message =
       err instanceof Error && err.name === "AbortError"

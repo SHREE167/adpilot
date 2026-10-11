@@ -1,0 +1,55 @@
+{
+  "note": "HAND-WRITTEN from the documented reachestimate response shape (users_lower_bound/users_upper_bound). Not a recorded Meta response: keys and numbers are placeholders, badged MOCK. Replace with `npm run record -- meta` once META_* keys are set.",
+  "fetchedAt": "2026-10-11T09:00:00.000Z",
+  "data": {
+    "city": {
+      "key": "MOCK-CHENNAI",
+      "name": "Chennai",
+      "region": "Tamil Nadu"
+    },
+    "ageMin": 18,
+    "ageMax": 24,
+    "interests": [
+      {
+        "id": "MOCK-INT-1",
+        "name": "Snack food"
+      },
+      {
+        "id": "MOCK-INT-2",
+        "name": "Street food"
+      }
+    ],
+    "targetingSpec": {
+      "geo_locations": {
+        "cities": [
+          {
+            "key": "MOCK-CHENNAI"
+          }
+        ]
+      },
+      "age_min": 18,
+      "age_max": 24,
+      "flexible_spec": [
+        {
+          "interests": [
+            {
+              "id": "MOCK-INT-1",
+              "name": "Snack food"
+            },
+            {
+              "id": "MOCK-INT-2",
+              "name": "Street food"
+            }
+          ]
+        }
+      ],
+      "publisher_platforms": [
+        "facebook",
+        "instagram"
+      ]
+    },
+    "lower": 1100000,
+    "upper": 1300000,
+    "apiVersion": "v26.0"
+  }
+}

@@ -61,10 +61,6 @@ function remember(plan: PlanResult) {
   box.lastResult = plan;
 }
 
-export function getLastResult(): PlanResult | null {
-  return mem().lastResult;
-}
-
 export async function savePlan(plan: PlanResult): Promise<void> {
   remember(plan);
   if (!(await ensureTables())) return;

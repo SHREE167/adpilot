@@ -1,0 +1,107 @@
+# CLAUDE.md — AdPilot
+
+## Summary
+
+AdPilot is an India-first media planner (Next.js 15 App Router + TypeScript, deployed on Vercel). A brief (domain, ₹ budget, city, audience, goal, language) goes through one server function, `runAgent`. It returns a channel mix, a rupee split, a forecast, ad angles and outreach scripts. An XGBoost model (trees walked in TS) scores channels. Policy rules split the money, and a static India 2026 rate card turns rupees into estimates. An optional LLM only writes the words.
+
+v2 makes it **the honest media planner for India's smallest businesses**: grounded in live local data, explainable, self-critiquing, and willing to say when not to spend.
+
+**Source of truth:** `docs/AdPilot_v2_Build_Brief_Advanced.pdf`. Read sections 3–9 before starting a milestone. For how to add a data source, use the `adpilot-enrichment` skill (`.claude/skills/adpilot-enrichment/SKILL.md`).
+
+## Commands
+
+```
+npm run dev          # local dev (turbopack) on http://localhost:3000
+npm run build        # production build
+npm run lint         # eslint
+npx tsc --noEmit     # type check
+npm test             # node:test unit tests (scripts/run-tests.mjs, no deps)
+npm run eval         # F16: v1 vs v2 on eval/golden-briefs.json, mock mode → eval/report.md
+npm run train-model  # retrain XGBoost (needs ml/.venv with Python)
+npm run record -- <youtube|groq|gemini|meta>   # ONE live call -> mock fixture
+```
+
+Set `ADPILOT_MOCK_APIS=1` in `.env.local` to make every enrichment source read `fixtures/api/<source>/*.json` (fully offline).
+
+## File map
+
+| Path | Role |
+| --- | --- |
+| `lib/agent.ts` | `runAgent()`: scrape → recognize → **enrich** → score → signal adjust → allocate → forecast → copy. Every step is a trace span. 14s internal budget. |
+| `lib/trace.ts` | `createTrace()` / `span()`: records each step into `PlanResult.trace` (F15). |
+| `lib/enrich/signal.ts` | `Signal<T>`, `withTimeout`, `runSource` (mock → cache → fetch with timeout), `runEnrichment` (allSettled). |
+| `lib/enrich/cache.ts` | `adpilot_cache` in Postgres with TTL, or an in-memory Map fallback. |
+| `lib/enrich/mock.ts` | `ADPILOT_MOCK_APIS=1` fixture reader. |
+| `lib/enrich/site-readiness.ts` | F1 part A: tracking + funnel checks → readiness score + fixes. |
+| `lib/enrich/pagespeed.ts`, `lib/speed-rules.ts`, `components/SpeedCheck.tsx` | F1 part B: PSI v5 mobile score + LCP. Deferred: `checkPageSpeed` action runs after render (45s timeout, 24h cache); LCP > 4s becomes the first fix. |
+| `lib/enrich/places.ts`, `components/LocalMarketCard.tsx` | F2: Places Text Search (competitors: Enterprise mask with rating; own name: Pro mask), 7d cache, skipped for B2B/SaaS/online-only. Raw recorded responses in `fixtures/api-raw/`. |
+| `lib/enrich/calendar.ts` | F3: festival/season window + weekly CPM multipliers. |
+| `lib/zero-rupee.ts`, `components/ZeroRupeeCard.tsx` | F10: pure rule ranking (readiness, Places, category, goal, budget) → up to 4 free actions with a `why`; `PlanResult.zeroRupee`. |
+| `lib/reality-check.ts`, `data/benchmarks.json`, `components/RealityCard.tsx` | F8: optional price + margin → break-even units, required CVR vs per-goal band (ESTIMATE) → Healthy / Tight / Likely loss; `PlanResult.realityCheck`. |
+| `data/festivals-in.json`, `data/city-state.json` | Static festival calendar (`verified:false` until checked) and city → state map. |
+| `lib/enrich/youtube-creators.ts`, `lib/creator-rates.ts`, `data/creator-rates.json`, `components/CreatorsCard.tsx` | F5: one `search.list` + `channels.list` per plan (7d cache, key in header), 2k-200k subs, top 5 by fit; collab cost band (ESTIMATE). YouTube only. |
+| `lib/enrich/meta-reach.ts`, `components/AudienceCard.tsx` | F4: adgeolocation + adinterest search -> `act_{id}/reachestimate` bounds; FB/IG reach capped at the pool in signal_adjust (`capMetaReach`). Skipped until `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`, `META_API_VERSION`; hand-written MOCK fixture until `npm run record -- meta`. |
+| `lib/launch-kit.ts`, `components/LaunchKit.tsx` | F7: deterministic per-channel kit from mix + signals (numbers only in structured fields); `guardKitTexts` reverts lines with untraceable numbers or non-English text. |
+| `lib/grounding-guard.ts` | F7: `extractNumbers` / `groundingSet` / `guardText` / `isEnglishText`. Runs on the kit rewrite and on all ad copy + outreach (`grounding_guard` trace span). |
+| `lib/llm.ts` | `generate()` with per-task order: kit rewrite + copy = Gemini first, Groq fallback; recognition = Groq first. Failure, timeout, unusable JSON or an echo (80%+ unchanged lines) moves to the next provider. English only; no OpenAI. |
+| `scripts/record-fixture.{mjs,ts}` | `npm run record -- <youtube|groq|gemini|meta>`: ONE real call with `.env.local` keys -> fixture. Prints counts only. |
+| `lib/scrape.ts` | Fetches the domain (4s timeout), parses meta, and runs `detectTracking()`. |
+| `lib/recognize.ts`, `lib/infer.ts` | Category = what is sold (weighted: product name/title > description > audience; buyer words ignored) + optional LLM refine. |
+| `lib/scoring.ts`, `lib/ml/infer.ts`, `lib/ml/features.ts` | XGBoost per channel (25 features, 12 channels) + policy rules. `explainScore()` returns the top TreeSHAP drivers; `assertModelSelfCheck()` also checks cover + SHAP additivity. |
+| `lib/ml/shap.ts`, `lib/ml/feature-labels.ts`, `components/ShapWaterfall.tsx` | F9: exact TreeSHAP (Lundberg 2018, Alg. 2), pure TS; human labels for the 25 features; "Why this channel?" waterfall; `PlanResult.shap`. |
+| `ml/train.py`, `ml/model.json` | Synthetic training; every node has `cover`. Python is blocked locally (Smart App Control): retrain in Colab (steps in the train.py docstring). |
+| `lib/policy.ts`, `lib/budget-grid.ts`, `lib/scenario.ts`, `components/BudgetSlider.tsx` | F11: shared budget policy (LinkedIn < ₹15k); server-only grid of raw scores at 11 budgets (0.25x-4x, SHAP only for mix channels); pure `scenarioAt` / `sliderSteps` / `transitions` re-run allocate + forecast + reality in the browser. |
+| `lib/ranges.ts` | F14: low/mid/high bands (default ±30%, Meta-pool-backed reach ±15%, `calibrated` reserved for M6); `rangesOf`/`totalsRangesOf` derive bands for pre-M5 plans. Pure, client-safe. |
+| `lib/allocate.ts`, `lib/forecast.ts` | Pure: 2–5 channels, 50% cap, sum == budget; rate-card math + weekly rollup with season multipliers. |
+| `lib/storage.ts`, `lib/rate-card.ts` | Postgres (`adpilot_plans`, `adpilot_rate_card`) or memory + localStorage. |
+| `lib/types.ts` | `PlanResult` contract, including Signal/Enrichment/Trace types (client-safe). |
+| `app/actions.ts`, `app/page.tsx` | Server Actions (`createPlan` → `runAgent`, `checkPageSpeed`); `maxDuration = 60`. |
+| `app/api/plan/route.ts`, `lib/plan-progress.ts`, `components/PipelineProgress.tsx` | Streamed build: NDJSON of trace events (`createTrace(now, onEvent)`), then the plan. Form falls back to `createPlan` if no stream. |
+| `components/Dashboard.tsx` | Result view: centered hero + KPI tiles, centered section heads, paired `grid-2` cards (Midnight Pro theme, Geist + Geist Mono, anime.js fade-ups). |
+| `app/globals.css`, `lib/theme.ts`, `components/ThemeToggle.tsx` | Midnight Pro tokens (dark default, light via toggle), layout primitives (`.page`, `.story-chapter`, `.section-head`, `.hero`, `.grid-2/3`, `.kpi-grid`, `.tiles`, `.panel`); TS palette mirrors CSS (tests/theme.test.ts). |
+| `components/ProvenanceBadge.tsx`, `ReadinessCard.tsx`, `TimingCard.tsx`, `DataSources.tsx` | LIVE / ESTIMATE / Not connected badges and the v2 cards. |
+| `fixtures/` | `fixtures/api/<source>/` mock fixtures and `fixtures/api-raw/` raw recordings. Sample briefs live in `lib/fixtures.ts`. |
+| `docs/` | Brief PDF, `ARCHITECTURE.md`, `DEMO.md` (5-min mock-mode demo), `REPORT-NOTES.md`, `PUSH-CHECKLIST.md`, `screenshots/`. |
+| `eval/run.ts`, `eval/metrics.ts`, `eval/golden-briefs.json`, `scripts/run-eval.mjs` | F16: `runAgent(input, {baseline: true})` = v1 path; specificity, diversity, signature, reality coverage, additivity, latency → `eval/report.md`. |
+| `tests/`, `scripts/` | node:test unit tests + a no-dependency TS test runner (resolve hooks). |
+
+## Engineering rules (brief section 5)
+
+- Zero-key mode must keep working exactly as today. Check after every feature.
+- Every external call: server-only, timeout, try/catch, cache, returns a `Signal`, wrapped in a trace span. Never throw out of an enrichment.
+- Keys only from `process.env` on the server. Never import `lib/enrich/*` into a client component.
+- New `PlanResult` fields are optional; old saved plans (localStorage + Postgres) must still render. `planVersion: 2`.
+- No new npm dependency without asking. Prefer fetch + small helpers. Unit tests use `node:test` (built in).
+- UI: use the frontend-design skill; extend the Midnight Pro look (dark default, one violet accent, Geist); use the layout primitives in `app/globals.css` (1200px centered container, centered section heads, `grid-2` pairs); card type stays card-sized (no story-scroll giants inside cards); respect `prefers-reduced-motion`; check 360px.
+- Every number in the UI is LIVE (source + date) or ESTIMATE. Never present an estimate as live data. Mock data is badged MOCK.
+- All plan text (kit, copy, outreach) is English. The form language is an audience hint only. No invented numbers in templates; use {{offer}}-style placeholders.
+- After each feature, `npm run lint`, `npx tsc --noEmit`, `npm run build` and `npm test` must all pass. One local commit per feature.
+- Keep the README roadmap and `.env.example` in sync with every new env var.
+
+## GIT RULES (strict, permanent)
+
+- Work only on local branch `v2`. One local commit per feature.
+- NEVER run `git push`, `git pull`, `git fetch`, `gh`, or anything that touches a remote or GitHub until the user says exactly "push now".
+- Never merge into main. (This repo's default branch is `master`; never merge into it either.)
+
+## ENVIRONMENT
+
+- Windows 10/11, cmd/PowerShell. Use Windows-safe commands and paths. npm scripts must work on Windows (no `rm -rf`, no bash-only syntax; prefer node scripts).
+- `.claude/skills/` contains vendored skills (frontend-design, webapp-testing, skill-creator). Do not modify them.
+- webapp-testing needs Python + Playwright. They are **not installed** (as of M1). Ask before installing anything.
+- Ignore npm deprecation/audit warnings. Do NOT run `npm audit fix` or upgrade packages (recharts, @vercel/postgres).
+
+## Milestones (brief section 7)
+
+| # | Scope | Needs keys | Est. |
+| --- | --- | --- | --- |
+| M1 | Enrichment framework (Signal, timeouts, cache, mock mode), F15 trace spans, provenance badges, F1 part A, F3 calendar | None | 2–3 days |
+| M2 | F1 part B (PageSpeed, deferred), F2 Places, F10 zero-rupee | #3 PageSpeed, #4 Places | 2 days |
+| M3 | F8 reality check, F9 TreeSHAP (retrain with cover), F16 eval harness v0 (v1 baseline) | None | 3 days |
+| M4 | F4 Meta reach, F5 YouTube, F7 launch kit + grounding guard | #2 Groq, #5 YouTube, #6 Meta | 3–4 days |
+| M5 | F11 budget slider, F14 ranges (default band) — done | None | 2 days |
+| M6 | F12 critic, F13 actuals loop, F14 calibrated intervals, F20 explore slice, (F6) | #1 Postgres, #2 Groq, (#7 SerpAPI) | 4 days |
+| M7 | F17 ad previews, F18 share/print, F15 trace page UI | None | 2 days |
+| M8 | Eval v2 vs v1 report, fixtures, tests, README, demo script, report/PPT material — done (M6/M7 deferred as future work) | — | 2 days |
+
+Each milestone ships alone. Run one milestone per session.

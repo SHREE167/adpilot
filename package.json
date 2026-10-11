@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "train-model": "ml\\.venv\\Scripts\\python ml\\train.py"
+    "test": "node scripts/run-tests.mjs",
+    "eval": "node scripts/run-eval.mjs",
+    "train-model": "ml\\.venv\\Scripts\\python ml\\train.py",
+    "record": "node scripts/record-fixture.mjs"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
